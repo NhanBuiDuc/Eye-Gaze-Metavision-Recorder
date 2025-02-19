@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtGui import QPainter, QColor
 from PyQt5.QtCore import Qt, QTimer, QPoint
 from auto_labelling.smooth import SmoothPursuitPattern
+import cv2
 
 class CountdownPainter(QWidget):
     countdown_finished = pyqtSignal()  # Signal when countdown ends
@@ -134,30 +135,19 @@ class SmoothPursuitWidget(QWidget):
     def __init__(self, display_widget, config_path="config.yaml", wrapper=None):
         super().__init__()
         self.setWindowTitle("Full Screen Countdown")
-
+        
         self.load_config(config_path)
         self.init_variables()
-        # # Create a vertical layout
-        # self.current_layout = QVBoxLayout()
-
-        # # Add the countdown widget
-        # self.countdown_painter = CountdownPainter()
-        # self.current_layout.addWidget(self.countdown_painter, stretch=1)
-
-        # # Add the display widget below the countdown
         self.display_widget = display_widget
-        
-        # self.current_layout.addWidget(self.display_widget.displayer, stretch=3)
-
-        # # Connect countdown finished signal to hide countdown and display
-        # self.countdown_painter.countdown_finished.connect(self.on_countdown_finished)
-
-        # self.setLayout(self.current_layout)
-
+    
         pattern = SmoothPursuitPattern("config/config_smooth.yaml", self.display_widget)
         pattern.run()
         print("End of animation")
         self.display_widget.stop_recording()
+        # Close itself after animation ends
+        self.close()
+        # Destroy CV2 windows
+        cv2.destroyAllWindows()
 
     def init_variables(self):
         """Initialize variables for animation"""
@@ -234,6 +224,15 @@ class SmoothPursuitWidget(QWidget):
         with open(self.log_file, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Timestamp_ms', 'Row', 'Point_Index', 'X', 'Y', 'Screen_Width', 'Screen_Height'])
+            
+    def closeEvent(self, event):
+        # Make sure to clean up CV2 windows when widget is closed
+        cv2.destroyAllWindows()
+        self.display_widget.show()  # Show the main window again
+        super().closeEvent(event)
+
+
+
 
 class DummyDisplayWidget(QWidget):
     """A placeholder widget to simulate display functionality"""

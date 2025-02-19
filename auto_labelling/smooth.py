@@ -1,3 +1,4 @@
+import os
 import random
 import cv2
 import numpy as np
@@ -7,10 +8,8 @@ import yaml
 import csv
 from datetime import datetime
 
-from widgets.metavsion_widgetv1 import MetavisionWidget
-
 class SmoothPursuitPattern:
-    def __init__(self, config_path="config.yaml", widget: MetavisionWidget=None):
+    def __init__(self, config_path="config.yaml", widget=None):
         try:
             with open(config_path, 'r', encoding='utf-8') as file:
                 self.config = yaml.safe_load(file)
@@ -26,6 +25,9 @@ class SmoothPursuitPattern:
         self.width = self.monitor.width
         self.height = self.monitor.height
         
+        self.root_path = self.config['save']['root_path']
+        os.makedirs(self.root_path, exist_ok=True)
+
         # Initialize pattern parameters from config
         pattern_config = self.config['pattern']
         self.num_rows = pattern_config['num_rows']
@@ -45,10 +47,10 @@ class SmoothPursuitPattern:
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         
         # Initialize log file
-        self.log_file = f"smooth_log.csv"
-        with open(self.log_file, 'w', newline='') as file:
+        self.log_file = widget.current_log_filename if widget else "saccade_log.csv"
+        with open(os.path.join(self.root_path, self.log_file), 'w', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(['Timestamp_ms', 'Row', 'Point_Index', 'X', 'Y', 'Screen_Width', 'Screen_Height'])
+            writer.writerow(['Timestamp_ms', 'Point_Index', 'X', 'Y', 'Next_X', 'Next_Y', 'Screen_Width', 'Screen_Height'])
         
         self.start_time = None
 
@@ -104,7 +106,10 @@ class SmoothPursuitPattern:
             if not self._wait_key(1.0):
                 return False
         return True
-
+    def cleanup(self):
+        """Clean up resources and close windows"""
+        cv2.destroyAllWindows()
+        # Add any additional cleanup needed
     def draw_heart(self, image, center, size):
         """Draw heart shape"""
         heart_color = tuple(self.config['colors']['heart'])
@@ -198,6 +203,10 @@ class SmoothPursuitPattern:
                 points = self.calculate_row_points(row)
                 
                 for point_index, (x, y) in enumerate(points):
+                    # Check if we should continue running
+                    if not hasattr(self.widget, 'is_recording') or not self.widget.is_recording:
+                        self.cleanup()
+                        return False
                     current_frame = image.copy()
                     try:
                         timestamp_ms = self.widget.events[-1][3]
@@ -234,7 +243,7 @@ class SmoothPursuitPattern:
             
             return
         finally:
-            cv2.destroyAllWindows()
+            self.cleanup()
 
 def main():
     pattern = SmoothPursuitPattern("config/config_smooth.yaml")

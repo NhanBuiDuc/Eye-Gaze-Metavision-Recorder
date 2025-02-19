@@ -7,6 +7,9 @@ pattern:
   margin: 20                  # Edge margin
   tail_points: 5             # Number of tail points to display
 
+save: 
+  root_path: "public/labels"
+  
 # Timing Configuration
 timing:
   countdown_seconds: 3        # Initial countdown time
