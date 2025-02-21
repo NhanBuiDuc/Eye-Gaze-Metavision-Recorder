@@ -49,9 +49,9 @@ class SaccadePattern:
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         
         # Initialize log file
-        self.log_file = widget.current_log_filename if widget else "saccade_log.csv"
+        self.log_file = os.path.join(self.root_path, widget.current_log_filename) if widget else "saccade_log.csv"
         
-        with open(os.path.join(self.root_path, self.log_file), 'w', newline='') as file:
+        with open(self.log_file, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Timestamp_ms', 'Point_Index', 'X', 'Y', 'Next_X', 'Next_Y', 'Screen_Width', 'Screen_Height'])
         

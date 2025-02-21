@@ -121,6 +121,213 @@ class Styles:
         }
     """
 
+
+class StyleSheetCSV:
+    # Colors
+    BACKGROUND_COLOR = "#F5F5F5"
+    CARD_COLOR = "#FFFFFF"
+    PRIMARY_COLOR = "#2196F3"    # Blue
+    DANGER_COLOR = "#F44336"     # Red
+    SUCCESS_COLOR = "#4CAF50"    # Green
+    WARNING_COLOR = "#FFC107"    # Yellow/Orange
+    PURPLE_COLOR = "#9C27B0"     # Purple
+    
+    # Button Styles
+    CONVERT_BUTTON = """
+        QPushButton {
+            background-color: #9C27B0;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #7B1FA2;
+        }
+        QPushButton:pressed {
+            background-color: #6A1B9A;
+        }
+        QPushButton:disabled {
+            background-color: #BDBDBD;
+        }
+    """
+    
+    LOAD_BUTTON = """
+        QPushButton {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #388E3C;
+        }
+        QPushButton:pressed {
+            background-color: #2E7D32;
+        }
+        QPushButton:disabled {
+            background-color: #BDBDBD;
+        }
+    """
+    
+    PLAY_BUTTON = """
+        QPushButton {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #1976D2;
+        }
+        QPushButton:pressed {
+            background-color: #1565C0;
+        }
+        QPushButton:disabled {
+            background-color: #BDBDBD;
+        }
+    """  # Material Design Green
+    
+    # Existing styles
+    GROUP_BOX = """
+        QGroupBox {
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            color: #455A64;
+            background-color: white;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            padding: 0 10px;
+            left: 15px;
+            top: -10px;
+        }
+    """
+    
+    BUTTON = """
+        QPushButton {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #1976D2;
+        }
+        QPushButton:pressed {
+            background-color: #0D47A1;
+        }
+        QPushButton:disabled {
+            background-color: #BDBDBD;
+        }
+    """
+    
+    STOP_BUTTON = """
+        QPushButton {
+            background-color: #F44336;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #D32F2F;
+        }
+        QPushButton:pressed {
+            background-color: #B71C1C;
+        }
+        QPushButton:disabled {
+            background-color: #BDBDBD;
+        }
+    """
+    
+    TEXTBOX = """
+        QLineEdit {
+            padding: 8px;
+            border: 1px solid #BDBDBD;
+            border-radius: 6px;
+            background-color: white;
+            font-size: 14px;
+        }
+        QLineEdit:focus {
+            border: 2px solid #2196F3;
+        }
+    """
+    
+    RADIO_BUTTON = """
+        QRadioButton {
+            font-size: 14px;
+            color: #455A64;
+        }
+        QRadioButton::indicator {
+            width: 16px;
+            height: 16px;
+        }
+    """
+    
+    # New styles for CSV analysis window
+    LABEL = """
+        QLabel {
+            font-size: 14px;
+            color: #455A64;
+            padding: 4px;
+        }
+    """
+    
+    TITLE_LABEL = """
+        QLabel {
+            font-size: 20px;
+            font-weight: bold;
+            color: #455A64;
+        }
+    """
+    
+    DISPLAY_TITLE = """
+        QLabel {
+            font-size: 18px;
+            font-weight: bold;
+            color: #455A64;
+        }
+    """
+    
+    DISPLAY_WIDGET = """
+        QWidget {
+            background-color: black;
+            border-radius: 8px;
+        }
+    """
+    
+    PROGRESS_BAR = """
+        QProgressBar {
+            border: 1px solid #BDBDBD;
+            border-radius: 6px;
+            text-align: center;
+            padding: 2px;
+            background-color: white;
+            height: 20px;
+        }
+        QProgressBar::chunk {
+            background-color: #2196F3;
+            border-radius: 5px;
+        }
+    """
+
 class StyleSheetMain:
     # Add new style for radio buttons
     RADIO_BUTTON = """
@@ -233,7 +440,7 @@ class StyleSheetMain:
             font-weight: bold;
         }}
         QPushButton:hover {{
-            background-color: #1565C0;
+            background-color: #00C853;
         }}
         QPushButton:disabled {{
             background-color: #BDBDBD;

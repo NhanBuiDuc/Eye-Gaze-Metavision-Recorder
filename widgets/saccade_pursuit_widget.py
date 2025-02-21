@@ -6,34 +6,6 @@ import yaml
 import cv2
 from auto_labelling.saccade import SaccadePattern  # Assuming this is the correct import path
 
-class CountdownPainter(QWidget):
-    countdown_finished = pyqtSignal()
-
-    def __init__(self, countdown_value=15, parent=None):
-        super().__init__(parent)
-        self.countdown_value = countdown_value
-        self.text_color = QColor(255, 0, 0)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_countdown)
-        self.timer.start(1000)
-
-    def update_countdown(self):
-        if self.countdown_value > 0:
-            self.countdown_value -= 1
-            self.update()
-        else:
-            self.timer.stop()
-            self.countdown_finished.emit()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        font = QFont()
-        font.setPointSize(72)
-        painter.setFont(font)
-        painter.setPen(self.text_color)
-        painter.drawText(self.rect(), Qt.AlignCenter, str(self.countdown_value))
-
 class SaccadeAnimation(QWidget):
     def __init__(self, point_config, colors, pattern_points, point_duration, show_direction=True):
         super().__init__()
@@ -131,9 +103,11 @@ class SaccadePursuitWidget(QWidget):
         pattern = SaccadePattern(config_path, self.display_widget)
         pattern.run()
         print("End of animation")
-        self.display_widget.stop_recording()
+        if self.display_widget.is_recording:
+            self.display_widget.stop_recording()
         # Close itself after animation ends
         self.close()
+        self.hide()
         # Destroy CV2 windows
         cv2.destroyAllWindows()
 
@@ -207,15 +181,15 @@ class SaccadePursuitWidget(QWidget):
         super().closeEvent(event)
 
 
-def main():
-    app = QApplication(sys.argv)
+# def main():
+#     app = QApplication(sys.argv)
 
-    # Create a dummy display widget
-    display_widget = QWidget()
-    display_widget.setStyleSheet("background-color: lightblue;")
+#     # Create a dummy display widget
+#     display_widget = QWidget()
+#     display_widget.setStyleSheet("background-color: lightblue;")
 
-    # Create and show the Saccade widget
-    window = SaccadePursuitWidget(display_widget)
-    window.show()
+#     # Create and show the Saccade widget
+#     window = SaccadePursuitWidget(display_widget)
+#     window.show()
 
-    sys.exit(app.exec_())
+#     sys.exit(app.exec_())

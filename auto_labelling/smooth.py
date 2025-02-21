@@ -47,8 +47,8 @@ class SmoothPursuitPattern:
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         
         # Initialize log file
-        self.log_file = widget.current_log_filename if widget else "saccade_log.csv"
-        with open(os.path.join(self.root_path, self.log_file), 'w', newline='') as file:
+        self.log_file = os.path.join(self.root_path, widget.current_log_filename) if widget else "saccade_log.csv"
+        with open(self.log_file, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Timestamp_ms', 'Point_Index', 'X', 'Y', 'Next_X', 'Next_Y', 'Screen_Width', 'Screen_Height'])
         
@@ -71,7 +71,7 @@ class SmoothPursuitPattern:
         """Log point data to CSV file"""
         with open(self.log_file, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([timestamp_ms, row, point_index, x, y, self.width, self.height])
+            writer.writerow([timestamp_ms, point_index, x, y, 0, 0, self.width, self.height])
 
     def _create_blank_image(self):
         """Create white background image"""
@@ -215,6 +215,8 @@ class SmoothPursuitPattern:
                         timestamp_ms = current_timestamp
 
                     point_count += 1
+
+                    print(timestamp_ms)
                     self.log_point(timestamp_ms, row, point_index, int(x), int(y))
                     
                     tail_history.append((int(x), int(y)))

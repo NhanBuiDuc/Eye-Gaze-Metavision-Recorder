@@ -143,9 +143,11 @@ class SmoothPursuitWidget(QWidget):
         pattern = SmoothPursuitPattern("config/config_smooth.yaml", self.display_widget)
         pattern.run()
         print("End of animation")
-        self.display_widget.stop_recording()
+        if self.display_widget.is_recording:
+            self.display_widget.stop_recording()
         # Close itself after animation ends
         self.close()
+        self.hide()
         # Destroy CV2 windows
         cv2.destroyAllWindows()
 
@@ -242,18 +244,18 @@ class DummyDisplayWidget(QWidget):
         self.displayer.setStyleSheet("background-color: lightblue;")  # Just to visualize it
 
 
-def main():
-    app = QApplication(sys.argv)
+# def main():
+#     app = QApplication(sys.argv)
 
-    # Create a dummy display widget (replace this with actual content)
-    display_widget = DummyDisplayWidget()
+#     # Create a dummy display widget (replace this with actual content)
+#     display_widget = DummyDisplayWidget()
 
-    # Pass it to SmoothPursuitWidget
-    window = SmoothPursuitWidget(display_widget)
-    window.show()
+#     # Pass it to SmoothPursuitWidget
+#     window = SmoothPursuitWidget(display_widget)
+#     window.show()
 
-    sys.exit(app.exec_())
+#     sys.exit(app.exec_())
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

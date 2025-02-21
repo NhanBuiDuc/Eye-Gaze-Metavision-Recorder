@@ -389,10 +389,11 @@ class MetavisionWidget(QWidget):
         self.start_button.setEnabled(True)
         self.smooth_radio.setEnabled(True)
         self.saccade_radio.setEnabled(True)
-        
+            
+        cv2.destroyAllWindows()
         # Close the pattern window if it exists
         if self.current_pattern is not None:
-            cv2.destroyAllWindows()
+            self.current_pattern.hide()
             self.current_pattern.close()
             self.current_pattern = None
         
