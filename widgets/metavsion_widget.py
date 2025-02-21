@@ -362,7 +362,7 @@ class MetavisionWidget(QWidget):
         self.csv_analysis_button = QPushButton('CSV Analysis Tool')
         self.csv_analysis_button.setStyleSheet(StyleSheetMain.BUTTON_ANA)
         self.csv_analysis_button.clicked.connect(self.open_csv_analysis)
-        layout.addWidget(self.csv_analysis_button)
+        # layout.addWidget(self.csv_analysis_button)
     
 
         file_group.setLayout(layout)
