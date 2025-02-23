@@ -40,7 +40,12 @@ class SaccadePattern:
         # Initialize timing parameters
         timing_config = self.config['timing']
         self.point_delay = timing_config['point_duration']
-        self.countdown_seconds = timing_config['countdown_seconds']
+        
+        try:
+            self.countdown_seconds = widget.recording_waiting_time
+        except:
+            self.countdown_seconds = timing_config['countdown_seconds']
+
         self.thank_you_duration = timing_config['thank_you_duration']
         
         # Initialize window

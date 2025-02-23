@@ -12,7 +12,7 @@ from widgets.metavision_display_widget import MetavisionDisplayWidget
 from widgets.roi_select_widget import DynamicROIDisplayWidget
 from widgets.smooth_pursuit_widget import SmoothPursuitWidget
 from widgets.saccade_pursuit_widget import SaccadePursuitWidget
-
+from PyQt5.QtGui import QIntValidator
 
 class MetavisionWidget(QWidget):
     def __init__(self, wrapper, parent=None):
@@ -21,6 +21,7 @@ class MetavisionWidget(QWidget):
         self.current_log_filename = "recording.csv"
         self.current_record_filename = "recording.raw"
         self.base_filename = "recording"
+        self.recording_waiting_time = 5
         self.is_recording = False
         self.setup_ui()
         self.events = None
@@ -61,14 +62,16 @@ class MetavisionWidget(QWidget):
 
     def setup_ui(self):
         # Main layout with margins for better spacing
-        main_layout = QHBoxLayout(self)
+        main_layout = QHBoxLayout()  # Remove self here
+        self.setLayout(main_layout)  # Set the layout separately
         main_layout.setContentsMargins(30, 30, 30, 30)
         main_layout.setSpacing(30)
         
         # Right panel first (to initialize displayer)
         right_panel = QFrame()
         right_panel.setStyleSheet(f"background-color: {StyleSheetMain.CARD_COLOR}; border-radius: 12px;")
-        right_layout = QVBoxLayout(right_panel)
+        right_layout = QVBoxLayout()  # Remove right_panel here
+        right_panel.setLayout(right_layout)  # Set the layout separately
         right_layout.setContentsMargins(20, 20, 20, 20)
         right_layout.setSpacing(15)
         
@@ -113,12 +116,11 @@ class MetavisionWidget(QWidget):
         # Left panel setup
         left_panel = QFrame()
         left_panel.setStyleSheet(f"background-color: {StyleSheetMain.CARD_COLOR}; border-radius: 12px;")
-        left_layout = QVBoxLayout(left_panel)
+        left_layout = QVBoxLayout()  # Remove left_panel here
+        left_panel.setLayout(left_layout)  # Set the layout separately
         left_layout.setContentsMargins(20, 20, 20, 20)
         left_layout.setSpacing(20)
         
-        # Now create ROI control group after displayer is initialized
-
         # Title with icon-like label
         title_container = QHBoxLayout()
         icon_label = QLabel("📹")
@@ -140,7 +142,6 @@ class MetavisionWidget(QWidget):
 
         roi_group = self.create_roi_control_group()
         left_layout.addWidget(roi_group)
-        
         
         left_layout.addStretch()
         
@@ -290,7 +291,28 @@ class MetavisionWidget(QWidget):
         self.saccade_radio.setStyleSheet(StyleSheetMain.RADIO_BUTTON)
         self.pattern_group.addButton(self.saccade_radio)
         layout.addWidget(self.saccade_radio)
-        
+        # Add waiting time label and text box
+        waiting_label = QLabel("Waiting time:")
+        waiting_label.setStyleSheet("color: #455A64;")
+        layout.addWidget(waiting_label)
+
+        self.waiting_time_input = QLineEdit()
+        self.waiting_time_input.setFixedWidth(60)  # Set a fixed width for the text box
+        self.waiting_time_input.setStyleSheet("QLineEdit { padding: 2px; border: 1px solid #ccc; border-radius: 3px; }")
+        self.waiting_time_input.setText(str(self.recording_waiting_time))  # Default value
+
+        # Add validator for integers only
+        validator = QIntValidator()
+        self.waiting_time_input.setValidator(validator)
+
+        # Add focus out event to validate when leaving the text box
+        self.waiting_time_input.focusOutEvent = self.validate_waiting_time
+        # Add text changed event
+        self.waiting_time_input.textChanged.connect(self.on_waiting_time_changed)
+
+        layout.addWidget(self.waiting_time_input)
+        layout.addStretch()  # Add stretch to keep elements left-aligned
+
         layout.addSpacing(10)  # Add space before buttons
         
         # Control buttons container
@@ -439,3 +461,25 @@ class MetavisionWidget(QWidget):
                 event_frame_gen.process_events(evs)
         except Exception as e:
             print(f"Error in Metavision pipeline: {str(e)}")
+    # Add the validation and change event methods to your class
+    def validate_waiting_time(self, event):
+        """Validate the waiting time when focus is lost"""
+        try:
+            value = int(self.waiting_time_input.text())
+            if value < 0:
+                self.waiting_time_input.setText("5")
+        except ValueError:
+            self.waiting_time_input.setText("5")
+        # Call the parent class's focusOutEvent
+        super(type(self), self).focusOutEvent(event)
+
+    def on_waiting_time_changed(self, text):
+        """Handle waiting time change event"""
+        try:
+            value = int(text) if text else 5
+            # Do something with the new value
+            print(f"Waiting time changed to: {value}")
+            self.recording_waiting_time = value
+            # You can emit a custom signal here or call other methods as needed
+        except ValueError:
+            pass  # Invalid input, will be handled by validator

@@ -14,7 +14,7 @@ save:
   
 # Timing Configuration
 timing:
-  countdown_seconds: 15         # Initial countdown time
+  countdown_seconds: 20         # Initial countdown time
   point_duration: 2         # Display duration for each point (seconds)
   thank_you_duration: 10       # Thank you screen display duration
 
