@@ -13,7 +13,7 @@ class MainApp(QMainWindow):
         self.wrapper = LiveReplayEventsIteratorWrapper(
             output_file="public/recordings",
             event_count=100000,
-            roi_coordinates=[400, 200, 800, 470],
+            roi_coordinates=[398,131,796,400],
             bias_file=None
         )
         
