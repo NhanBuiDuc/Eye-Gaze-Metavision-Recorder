@@ -2,12 +2,12 @@
 pattern:
   type: "saccade"               # Pattern type (saccade/pursuit)
   num_rows: 20                  # Number of grid rows
-  num_cols: 50                  # Number of grid columns
-  num_points: 50               # Number of points to generate (less than or equal to num_rows * num_cols)
-  margin: 50                   # Screen edge margin
-  seed: 42                     # Random seed to maintain same appearance order each run
-  show_countdown: true         # Enable/disable countdown display
-  show_direction: false        # Show direction of next point movement
+  num_cols: 80                  # Number of grid columns
+  num_points: 1600              # Number of points to generate (less than or equal to num_rows * num_cols)
+  margin: 50                    # Screen edge margin
+  seed: 42                      # Random seed to maintain same appearance order each run
+  show_countdown: true          # Enable/disable countdown display
+  show_direction: false         # Show direction of next point movement
 
 save: 
   root_path: "public/labels"
@@ -15,17 +15,17 @@ save:
 # Timing Configuration
 timing:
   countdown_seconds: 20         # Initial countdown time
-  point_duration: 2         # Display duration for each point (seconds)
-  thank_you_duration: 10       # Thank you screen display duration
+  point_duration: 2             # Display duration for each point (seconds)
+  thank_you_duration: 10        # Thank you screen display duration
 
 # Color Configuration (BGR format)
 colors:
-  background: [0, 0, 0]        # Background color (white)
-  point: [0, 0, 255]          # Point color (red)
-  current_point: [0, 0, 255]   # Current point color (red)
-  direction_arrow: [0, 255, 0] # Direction arrow color (green)
-  heart: [0, 0, 255]          # Heart color (red)
-  text: [255, 255, 255]       # Text color (black)
+  background: [0, 0, 0]         # Background color (white)
+  point: [0, 0, 255]            # Point color (red)
+  current_point: [0, 0, 255]    # Current point color (red)
+  direction_arrow: [0, 255, 0]  # Direction arrow color (green)
+  heart: [0, 0, 255]            # Heart color (red)
+  text: [255, 255, 255]         # Text color (black)
 
 # Point Configuration
 point:

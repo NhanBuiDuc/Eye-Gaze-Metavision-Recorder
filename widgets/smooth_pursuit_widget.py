@@ -146,8 +146,8 @@ class SmoothPursuitWidget(QWidget):
         if self.display_widget.is_recording:
             self.display_widget.stop_recording()
         # Close itself after animation ends
-        self.close()
-        self.hide()
+        # self.close()
+        # self.hide()
         # Destroy CV2 windows
         cv2.destroyAllWindows()
 
@@ -227,11 +227,11 @@ class SmoothPursuitWidget(QWidget):
             writer = csv.writer(file)
             writer.writerow(['Timestamp_ms', 'Row', 'Point_Index', 'X', 'Y', 'Screen_Width', 'Screen_Height'])
             
-    def closeEvent(self, event):
-        # Make sure to clean up CV2 windows when widget is closed
-        cv2.destroyAllWindows()
-        self.display_widget.show()  # Show the main window again
-        super().closeEvent(event)
+    # def closeEvent(self, event):
+    #     # Make sure to clean up CV2 windows when widget is closed
+    #     cv2.destroyAllWindows()
+    #     self.display_widget.show()  # Show the main window again
+    #     super().closeEvent(event)
 
 
 

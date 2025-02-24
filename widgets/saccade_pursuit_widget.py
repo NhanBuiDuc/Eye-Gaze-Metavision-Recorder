@@ -100,7 +100,7 @@ class SaccadePursuitWidget(QWidget):
         self.init_variables()
         self.display_widget = display_widget
         
-        pattern = SaccadePattern(config_path, self.display_widget)
+        pattern = SaccadePattern(config_path, self.display_widget, self.display_widget.current_saccade_part)
         pattern.run()
         print("End of animation")
         if self.display_widget.is_recording:
@@ -177,8 +177,9 @@ class SaccadePursuitWidget(QWidget):
     def closeEvent(self, event):
         # Make sure to clean up CV2 windows when widget is closed
         cv2.destroyAllWindows()
-        self.display_widget.show()  # Show the main window again
+        # self.display_widget.show()  # Show the main window again
         super().closeEvent(event)
+        self.close()
 
 
 # def main():

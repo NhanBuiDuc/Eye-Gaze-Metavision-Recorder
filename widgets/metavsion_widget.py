@@ -13,6 +13,8 @@ from widgets.metavsion_widget import DynamicROIDisplayWidget
 from widgets.smooth_pursuit_widget import SmoothPursuitWidget
 from widgets.saccade_pursuit_widget import SaccadePursuitWidget
 from PyQt5.QtGui import QIntValidator
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QMessageBox
 
 class MetavisionWidget(QWidget):
     def __init__(self, wrapper, parent=None):
@@ -22,6 +24,7 @@ class MetavisionWidget(QWidget):
         self.current_record_filename = "recording.raw"
         self.base_filename = "recording"
         self.recording_waiting_time = 5
+        self.current_saccade_part = 1
         self.roi = [400, 200, 800, 470]
         self.is_recording = False
         self.events = None
@@ -209,6 +212,31 @@ class MetavisionWidget(QWidget):
         roi_group.setLayout(layout)
         return roi_group
     
+    def confirm_saccade_part(self):
+        """Handle the saccade part confirmation"""
+        try:
+            part_value = int(self.saccade_part_input.text())
+            if 1 <= part_value <= 10:
+                # Convert from 1-10 to 0-9 for internal use
+                self.current_saccade_part = part_value - 1
+                QMessageBox.information(
+                    self, 
+                    "Saccade Part", 
+                    f"Saccade pattern part {part_value} selected successfully."
+                )
+            else:
+                QMessageBox.warning(
+                    self, 
+                    "Invalid Input", 
+                    "Please enter a number between 1 and 10."
+                )
+        except ValueError:
+            QMessageBox.warning(
+                self, 
+                "Invalid Input", 
+                "Please enter a valid number."
+            )
+
     def apply_manual_roi(self):
         """Apply ROI from manual input fields"""
         try:
@@ -297,53 +325,171 @@ class MetavisionWidget(QWidget):
         self.saccade_radio.setStyleSheet(StyleSheetMain.RADIO_BUTTON)
         self.pattern_group.addButton(self.saccade_radio)
         layout.addWidget(self.saccade_radio)
-        # Add waiting time label and text box
-        waiting_label = QLabel("Waiting time:")
+
+        # Connect pattern selection changes
+        self.smooth_radio.toggled.connect(self.on_pattern_changed)
+        self.saccade_radio.toggled.connect(self.on_pattern_changed)
+
+        # Create a container for saccade-specific settings
+        self.saccade_settings_container = QWidget()
+        saccade_layout = QVBoxLayout(self.saccade_settings_container)
+        saccade_layout.setContentsMargins(10, 5, 10, 5)
+        saccade_layout.setSpacing(8)
+        
+        # Add a subtle background to the container
+        self.saccade_settings_container.setStyleSheet("""
+            QWidget {
+                background-color: rgba(240, 240, 240, 0.5);
+                border-radius: 5px;
+            }
+        """)
+        
+        # Saccade part selection
+        saccade_part_layout = QHBoxLayout()
+        saccade_part_label = QLabel("Saccade Part:")
+        saccade_part_label.setStyleSheet("color: #455A64; background: transparent;")
+        
+        self.saccade_part_input = QLineEdit("1")
+        self.saccade_part_input.setFixedWidth(50)
+        self.saccade_part_input.setValidator(QIntValidator(1, 10))  # Limit to numbers 1-10
+        self.saccade_part_input.setAlignment(Qt.AlignCenter)
+        self.saccade_part_input.setToolTip("Choose a saccade pattern part (1-10)")
+        self.saccade_part_input.setStyleSheet("""
+            QLineEdit {
+                padding: 4px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background-color: white;
+            }
+        """)
+        
+        self.confirm_part_button = QPushButton("Apply")
+        self.confirm_part_button.setStyleSheet(StyleSheetMain.BUTTON)
+        self.confirm_part_button.setFixedWidth(70)
+        self.confirm_part_button.clicked.connect(self.confirm_saccade_part)
+        
+        saccade_part_layout.addWidget(saccade_part_label)
+        saccade_part_layout.addWidget(self.saccade_part_input)
+        saccade_part_layout.addWidget(self.confirm_part_button)
+        saccade_part_layout.addStretch()
+        
+        saccade_layout.addLayout(saccade_part_layout)
+        layout.addWidget(self.saccade_settings_container)
+        
+        # Initially hide saccade settings
+        self.saccade_settings_container.setVisible(False)
+        
+        # Add waiting time section with improved styling
+        waiting_section = QHBoxLayout()
+        waiting_label = QLabel("Countdown Time:")
         waiting_label.setStyleSheet("color: #455A64;")
-        layout.addWidget(waiting_label)
-
+        
         self.waiting_time_input = QLineEdit()
-        self.waiting_time_input.setFixedWidth(60)  # Set a fixed width for the text box
-        self.waiting_time_input.setStyleSheet("QLineEdit { padding: 2px; border: 1px solid #ccc; border-radius: 3px; }")
-        self.waiting_time_input.setText(str(self.recording_waiting_time))  # Default value
-
+        self.waiting_time_input.setFixedWidth(60)
+        self.waiting_time_input.setAlignment(Qt.AlignCenter)
+        self.waiting_time_input.setStyleSheet("""
+            QLineEdit {
+                padding: 4px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background-color: white;
+            }
+        """)
+        self.waiting_time_input.setText(str(self.recording_waiting_time))
+        
+        waiting_seconds_label = QLabel("seconds")
+        waiting_seconds_label.setStyleSheet("color: #455A64;")
+        
         # Add validator for integers only
-        validator = QIntValidator()
+        validator = QIntValidator(1, 60)  # Limit to reasonable countdown values
         self.waiting_time_input.setValidator(validator)
-
+        self.waiting_time_input.setToolTip("Set countdown time before recording (1-60 seconds)")
+        
         # Add focus out event to validate when leaving the text box
         self.waiting_time_input.focusOutEvent = self.validate_waiting_time
         # Add text changed event
         self.waiting_time_input.textChanged.connect(self.on_waiting_time_changed)
-
-        layout.addWidget(self.waiting_time_input)
-        layout.addStretch()  # Add stretch to keep elements left-aligned
-
-        layout.addSpacing(10)  # Add space before buttons
         
-        # Control buttons container
+        waiting_section.addWidget(waiting_label)
+        waiting_section.addWidget(self.waiting_time_input)
+        waiting_section.addWidget(waiting_seconds_label)
+        waiting_section.addStretch()
+        
+        layout.addLayout(waiting_section)
+        layout.addSpacing(15)  # Add space before buttons
+        
+        # Control buttons container with improved styling
         buttons_layout = QHBoxLayout()
         buttons_layout.setSpacing(10)
         
         # Start button
         self.start_button = QPushButton("▶ Start Recording")
-        self.start_button.setStyleSheet(StyleSheetMain.BUTTON)
-        self.start_button.setFixedSize(150, 40)
+        self.start_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 8px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
+        self.start_button.setFixedSize(160, 40)
         self.start_button.clicked.connect(self.start_selected_pattern)
         
         # Stop button
         self.stop_button = QPushButton("⬛ Stop")
-        self.stop_button.setStyleSheet(StyleSheetMain.STOP_BUTTON)
+        self.stop_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 8px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #d32f2f;
+            }
+            QPushButton:pressed {
+                background-color: #b71c1c;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
         self.stop_button.setFixedSize(100, 40)
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.stop_recording)
         
         buttons_layout.addWidget(self.start_button)
         buttons_layout.addWidget(self.stop_button)
+        buttons_layout.addStretch()
+        
         layout.addLayout(buttons_layout)
         
         recording_group.setLayout(layout)
         return recording_group
+
+    def on_pattern_changed(self):
+        """Handle pattern selection changed"""
+        is_saccade_mode = self.saccade_radio.isChecked()
+        self.saccade_settings_container.setVisible(is_saccade_mode)
+        
+        # If switching to saccade mode and part wasn't set yet, ensure we have a default
+        if is_saccade_mode and not hasattr(self, 'current_saccade_part'):
+            self.current_saccade_part = 0  # Default to first part (0-based index)
     
     def start_selected_pattern(self):
         """Start recording with the selected pattern"""
@@ -402,6 +548,17 @@ class MetavisionWidget(QWidget):
         self.csv_analysis_window.show()
 
     def start_recording(self):
+        if self.pattern_group.checkedButton() == self.saccade_radio:
+            part = self.current_saccade_part
+            x1, y1, x2, y2 =  self.wrapper.roi_coordinates
+            coord_str = f"{x1}_{y1}_{x2}_{y2}"
+            print(coord_str)
+            self.base_filename = self.file_text_box.text()
+            self.current_log_filename = f"{coord_str}_{self.base_filename}_part{part}.csv"
+            self.current_record_filename = f"{coord_str}_{self.base_filename}_part{part}.raw"
+        print(f"Log file: {self.current_log_filename}")
+        print(f"Record file: {self.current_record_filename}")
+        
         self.wrapper.start_recording(self.current_record_filename)
         self.is_recording = True
         self.stop_button.setEnabled(True)

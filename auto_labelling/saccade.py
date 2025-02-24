@@ -7,9 +7,10 @@ from screeninfo import get_monitors
 import yaml
 import csv
 from datetime import datetime
+import math
 
 class SaccadePattern:
-    def __init__(self, config_path="config.yaml", widget=None):
+    def __init__(self, config_path="config.yaml", widget=None, random_part_no=0):
         try:
             with open(config_path, 'r', encoding='utf-8') as file:
                 self.config = yaml.safe_load(file)
@@ -19,6 +20,7 @@ class SaccadePattern:
 
         self.widget = widget
         self.is_fullscreen = True
+        self.random_part_no = random_part_no  # New parameter for part selection
 
         # Get screen dimensions
         self.monitor = get_monitors()[0]
@@ -74,13 +76,12 @@ class SaccadePattern:
             else:
                 cv2.setWindowProperty(self.window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
             return True
-        elif key == 27:  # ESC key to exit
-            return False
         return True
 
     def _generate_grid_points(self):
         """Generate grid points and select random required number of points"""
-        points = []
+        # Generate all grid points
+        all_points = []
         row_spacing = (self.height - 2 * self.margin) / (self.num_rows - 1)
         col_spacing = (self.width - 2 * self.margin) / (self.num_cols - 1)
         
@@ -88,11 +89,28 @@ class SaccadePattern:
             y = self.margin + row * row_spacing
             for col in range(self.num_cols):
                 x = self.margin + col * col_spacing
-                points.append((int(x), int(y)))
+                all_points.append((int(x), int(y)))
         
-        # Randomly select required points
-        random.shuffle(points)
-        return points[:self.num_points]
+        # Randomly shuffle all points with fixed seed
+        random.seed(self.seed)
+        random.shuffle(all_points)
+        
+        # Take only the number of points we need
+        filtered_points = all_points[:self.num_points]
+        
+        # Divide points into 10 equal parts
+        points_per_part = math.ceil(len(filtered_points) / 10)
+        
+        # Ensure random_part_no is between 0 and 9
+        part_index = max(0, min(9, self.random_part_no))
+        
+        # Get the points for the selected part
+        start_idx = part_index * points_per_part
+        end_idx = min(start_idx + points_per_part, len(filtered_points))
+        
+        selected_points = filtered_points[start_idx:end_idx]
+        
+        return selected_points
 
     def log_point(self, timestamp_ms, point_index, current_point, next_point=None):
         """Log point data to CSV file"""
@@ -255,7 +273,8 @@ class SaccadePattern:
             self.cleanup()
 
 def main():
-    pattern = SaccadePattern("config/config_saccade.yaml")
+    # You can specify the part number (0-9) as the third parameter
+    pattern = SaccadePattern("config/config_saccade.yaml", random_part_no=0)
     pattern.run()
 
 if __name__ == "__main__":
