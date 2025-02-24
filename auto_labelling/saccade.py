@@ -239,7 +239,6 @@ class SaccadePattern:
                     return False
 
                 next_point = self.points[i + 1] if i < len(self.points) - 1 else None
-                current_frame = image.copy()
 
                 try:
                     timestamp_ms = self.widget.events[-1][3] if self.widget else int(time.time() * 1000)
@@ -249,22 +248,54 @@ class SaccadePattern:
 
                 point_count += 1
                 self.log_point(timestamp_ms, i, current_point, next_point)
-
-                # Draw current point
-                cv2.circle(current_frame, current_point,
-                          int(point_config['size'] * point_config.get('size_multiplier', 1)),
-                          tuple(colors['current_point']),
-                          point_config['thickness'])
-
-                # Draw direction arrow if enabled
-                if self.show_direction and next_point:
-                    cv2.arrowedLine(current_frame, current_point, next_point,
-                                  tuple(colors['direction_arrow']), 2, tipLength=0.2)
-
-                cv2.imshow(self.window_name, current_frame)
                 
-                if not self._wait_key(self.point_delay):
-                    return
+                # Start time for this specific point
+                point_start_time = time.time()
+                
+                # Display this point with countdown until point_delay is reached
+                while True:
+                    current_frame = image.copy()
+                    
+                    # Calculate remaining time for this point
+                    elapsed = time.time() - point_start_time
+                    remaining = max(0, self.point_delay - elapsed)
+                    
+                    # Draw current point
+                    cv2.circle(current_frame, current_point,
+                            int(point_config['size'] * point_config.get('size_multiplier', 1)),
+                            tuple(colors['current_point']),
+                            point_config['thickness'])
+
+                    # Draw direction arrow if enabled
+                    if self.show_direction and next_point:
+                        cv2.arrowedLine(current_frame, current_point, next_point,
+                                    tuple(colors['direction_arrow']), 2, tipLength=0.2)
+                    
+                    # Display countdown text below the circle
+                    countdown_text = f"{remaining:.1f}s"
+                    text_x = current_point[0] - 30  # Adjust for text width
+                    text_y = current_point[1] + 40  # Position below the circle
+                    
+                    cv2.putText(current_frame, countdown_text,
+                                (text_x, text_y),
+                                getattr(cv2, self.config['font']['type']),
+                                0.8,  # Font scale
+                                tuple(colors['text']),
+                                2)  # Thickness
+                    
+                    cv2.imshow(self.window_name, current_frame)
+                    
+                    # Check for key press and handle it
+                    key = cv2.waitKey(1) & 0xFF
+                    if key != 255 and not self._handle_keyboard_input(key):
+                        return
+                    
+                    # Break the loop when point_delay is reached
+                    if remaining <= 0:
+                        break
+                    
+                    # Small sleep to avoid hogging CPU
+                    time.sleep(0.01)
 
             # Show thank you message at the end
             self.show_thank_you()
@@ -272,10 +303,10 @@ class SaccadePattern:
         finally:
             self.cleanup()
 
-def main():
-    # You can specify the part number (0-9) as the third parameter
-    pattern = SaccadePattern("config/config_saccade.yaml", random_part_no=0)
-    pattern.run()
+# def main():
+#     # You can specify the part number (0-9) as the third parameter
+#     pattern = SaccadePattern("config/config_saccade.yaml", random_part_no=0)
+#     pattern.run()
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

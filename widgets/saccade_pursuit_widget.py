@@ -100,23 +100,28 @@ class SaccadePursuitWidget(QWidget):
         self.init_variables()
         self.display_widget = display_widget
         
-        pattern = SaccadePattern(config_path, self.display_widget, self.display_widget.current_saccade_part)
-        pattern.run()
-        print("End of animation")
-        if self.display_widget.is_recording:
-            self.display_widget.stop_recording()
-        # Close itself after animation ends
-        self.close()
+        self.pattern = SaccadePattern(config_path, self.display_widget, self.display_widget.current_saccade_part)
         self.hide()
-        # Destroy CV2 windows
-        cv2.destroyAllWindows()
-
+        
     def init_variables(self):
         """Initialize variables for animation"""
         self.current_point_index = 0
         self.state = 'countdown'
         self.countdown_value = self.countdown_seconds
         self.pattern_points = self._generate_grid_points()
+
+    def start_animation(self):
+        self.pattern.run()
+
+    def end_animation(self):
+        print("End of animation")
+        cv2.destroyAllWindows()
+        # Close itself after animation ends
+        self.close()
+        self.hide()
+
+        if self.display_widget.is_recording:
+            self.display_widget.stop_recording()
 
     def on_countdown_finished(self):
         pass
@@ -174,12 +179,12 @@ class SaccadePursuitWidget(QWidget):
             
         return points
 
-    def closeEvent(self, event):
-        # Make sure to clean up CV2 windows when widget is closed
-        cv2.destroyAllWindows()
-        # self.display_widget.show()  # Show the main window again
-        super().closeEvent(event)
-        self.close()
+    # def closeEvent(self, event):
+    #     # Make sure to clean up CV2 windows when widget is closed
+    #     cv2.destroyAllWindows()
+    #     # self.display_widget.show()  # Show the main window again
+    #     super().closeEvent(event)
+    #     self.close()
 
 
 # def main():

@@ -520,6 +520,9 @@ class MetavisionWidget(QWidget):
             self.start_smooth_pursuit()
         else:
             self.start_saccade_pursuit()
+            
+        if self.current_pattern is not None:            
+            self.current_pattern.end_animation()
 
     def create_file_settings_group(self):
         file_group = QGroupBox("File Settings")
@@ -575,6 +578,7 @@ class MetavisionWidget(QWidget):
             self.base_filename = self.file_text_box.text()
             self.current_log_filename = f"{coord_str}_{self.base_filename}_part{part}.csv"
             self.current_record_filename = f"{coord_str}_{self.base_filename}_part{part}.raw"
+
         print(f"Log file: {self.current_log_filename}")
         print(f"Record file: {self.current_record_filename}")
         
@@ -597,23 +601,27 @@ class MetavisionWidget(QWidget):
         cv2.destroyAllWindows()
         # Close the pattern window if it exists
         if self.current_pattern is not None:
+            self.current_pattern.end_animation()
             self.current_pattern.hide()
             self.current_pattern.close()
             self.current_pattern = None
-        
-        self.show()
+    
 
     def start_smooth_pursuit(self):
         """Start the smooth pursuit pattern"""
         self.start_recording()
         self.current_pattern = SmoothPursuitWidget(self, "config/config_smooth.yaml", self.wrapper)
-        self.current_pattern.showFullScreen()
-        
+        if self.current_pattern is not None:
+            self.current_pattern.showFullScreen()
+            self.current_pattern.start_animation()
+
     def start_saccade_pursuit(self):
         """Start the saccade pattern"""
         self.start_recording()
         self.current_pattern = SaccadePursuitWidget(self, "config/config_saccade.yaml", self.wrapper)
-        self.current_pattern.showFullScreen()
+        if self.current_pattern is not None:
+            self.current_pattern.showFullScreen()
+            self.current_pattern.start_animation()
 
     def set_text_log_textbox(self, textbox: QLineEdit):
         self.current_log_filename = textbox.text()

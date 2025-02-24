@@ -140,16 +140,21 @@ class SmoothPursuitWidget(QWidget):
         self.init_variables()
         self.display_widget = display_widget
     
-        pattern = SmoothPursuitPattern("config/config_smooth.yaml", self.display_widget)
-        pattern.run()
+        self.pattern = SmoothPursuitPattern("config/config_smooth.yaml", self.display_widget)
+        self.hide()
+
+    def start_animation(self):
+        self.pattern.run()
+
+    def end_animation(self):
         print("End of animation")
+        cv2.destroyAllWindows()
+        # Close itself after animation ends
+        self.close()
+        self.hide()
+
         if self.display_widget.is_recording:
             self.display_widget.stop_recording()
-        # Close itself after animation ends
-        # self.close()
-        # self.hide()
-        # Destroy CV2 windows
-        cv2.destroyAllWindows()
 
     def init_variables(self):
         """Initialize variables for animation"""
@@ -159,11 +164,7 @@ class SmoothPursuitWidget(QWidget):
         self.state = 'countdown'
         self.countdown_value = self.countdown_seconds
         self.points = []
-        self.patterns_point = self.calculate_all_points()
 
-    def on_countdown_finished(self):
-        pass
-        
     def load_config(self, config_path):
         """Load configuration from YAML file"""
         try:
@@ -192,46 +193,12 @@ class SmoothPursuitWidget(QWidget):
         self.point_color = QColor(*self.colors['point'])
         self.text_color = QColor(*self.colors['text'])
         self.heart_color = QColor(*self.colors['heart'])
-
-    def calculate_all_points(self):
-        """Calculate all points for the pattern"""
-        all_points = []  # Create a list to store all rows of points
-        screen = QDesktopWidget().screenGeometry()
-        width, height = screen.width(), screen.height()
-        
-        for row in range(self.num_rows):
-            row_points = []  # Create a list for each row's points
-            row_height = (height - 2 * self.margin) / (self.num_rows - 1)
-            y = self.margin + row * row_height
-            row_width = width - 2 * self.margin
             
-            if row % 2 == 0:  # Even rows: left to right
-                row_points = [QPoint(
-                    int(self.margin + i * row_width/(self.points_per_row-1)),
-                    int(y)
-                ) for i in range(self.points_per_row)]
-            else:  # Odd rows: right to left
-                row_points = [QPoint(
-                    int(width - self.margin - i * row_width/(self.points_per_row-1)),
-                    int(y)
-                ) for i in range(self.points_per_row)]
-            
-            all_points.append(row_points)  # Append each row's points to the main list
-        
-        return all_points
-        
-    def init_logging(self):
-        """Initialize logging"""
-        self.log_file = f"smooth_log.csv"
-        with open(self.log_file, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Timestamp_ms', 'Row', 'Point_Index', 'X', 'Y', 'Screen_Width', 'Screen_Height'])
-            
-    # def closeEvent(self, event):
-    #     # Make sure to clean up CV2 windows when widget is closed
-    #     cv2.destroyAllWindows()
-    #     self.display_widget.show()  # Show the main window again
-    #     super().closeEvent(event)
+    def closeEvent(self, event):
+        # Make sure to clean up CV2 windows when widget is closed
+        cv2.destroyAllWindows()
+        self.display_widget.show()  # Show the main window again
+        super().closeEvent(event)
 
 
 

@@ -251,9 +251,9 @@ class SmoothPursuitPattern:
         finally:
             self.cleanup()
 
-def main():
-    pattern = SmoothPursuitPattern("config/config_smooth.yaml")
-    pattern.run()
+# def main():
+#     pattern = SmoothPursuitPattern("config/config_smooth.yaml")
+#     pattern.run()
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
