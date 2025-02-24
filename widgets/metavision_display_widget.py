@@ -8,10 +8,9 @@ class DynamicROIDisplayWidget(QWidget):
     roi_changed = pyqtSignal(list)  # Emits [x1, y1, x2, y2]
     coordinates_updated = pyqtSignal(str)  # Emits coordinate string for display
 
-    def __init__(self, parent_widget):
-        super().__init__(parent_widget)
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.image = None
-        self.parent_widget = parent_widget
         self.setMinimumSize(640, 480)
         self.setSizePolicy(self.sizePolicy().Expanding, self.sizePolicy().Expanding)
         
@@ -25,7 +24,7 @@ class DynamicROIDisplayWidget(QWidget):
         self.resize_margin = 10  # pixels
         
         # Initial ROI coordinates
-        self.roi_coords = self.parent_widget.roi
+        self.roi_coords = [400, 200, 800, 470]
         self.drag_enabled = True
         
         # Enable mouse tracking
@@ -39,29 +38,42 @@ class DynamicROIDisplayWidget(QWidget):
         """Set ROI coordinates programmatically"""
         self.roi_coords = roi_coords
         self.update()
-        # scaled_roi = self.get_scaled_roi()
-        # self.roi_changed.emit(scaled_roi)
-
-    def update_frame(self, frame):
+        scaled_roi = self.get_scaled_roi()
+        self.roi_changed.emit(scaled_roi)
+        
+    def update_frame(self, frame, flag_mode=None):
         if frame is not None:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             self.image = QImage(frame.data, frame.shape[1], frame.shape[0],
-                              frame.strides[0], QImage.Format_RGB888)
+                            frame.strides[0], QImage.Format_RGB888)
+            
+            # Calculate and store image boundaries within the widget
+            scaled_img = self.image.scaled(self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            self.img_x_offset = (self.width() - scaled_img.width()) // 2
+            self.img_y_offset = (self.height() - scaled_img.height()) // 2
+            self.img_width = scaled_img.width()
+            self.img_height = scaled_img.height()
+            
             self.update()
-            # Emit coordinates for display
-            coords = self.get_scaled_roi()
+            
+            coords = self.get_scaled_roi(flag_mode)
             coord_str = f"ROI: ({coords[0]}, {coords[1]}, {coords[2]}, {coords[3]})"
             self.coordinates_updated.emit(coord_str)
 
-    def get_scaled_roi(self):
+    def get_scaled_roi(self, flag=None):
         """Convert ROI coordinates from widget space to image space"""
         if self.image is None:
+            return self.roi_coords
+        
+        if flag == "manual":
             return self.roi_coords
 
         # Get the scaled image dimensions and position
         scaled_img = self.image.scaled(self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
         x_offset = (self.width() - scaled_img.width()) // 2
         y_offset = (self.height() - scaled_img.height()) // 2
+        
+        # print(self.width(), self.height())
         
         # Convert coordinates
         scale_x = self.image.width() / scaled_img.width()
@@ -73,13 +85,24 @@ class DynamicROIDisplayWidget(QWidget):
         y2 = int((self.roi_coords[3] - y_offset) * scale_y)
         
         return [x1, y1, x2, y2]
-
+    def is_inside_image(self, pos):
+        """Check if a point is inside the displayed image area"""
+        if not hasattr(self, 'img_x_offset'):
+            return True  # Default to true if image hasn't been loaded yet
+            
+        return (self.img_x_offset <= pos.x() <= self.img_x_offset + self.img_width and
+                self.img_y_offset <= pos.y() <= self.img_y_offset + self.img_height)
+    
     def mousePressEvent(self, event):
         if not self.drag_enabled:
             return
         
         if event.button() == Qt.LeftButton:
             pos = event.pos()
+            
+            # Check if we're clicking within the image area
+            if not self.is_inside_image(pos):
+                return
             
             # Check if clicking near ROI edges for resizing
             if self.is_near_roi_edge(pos):
@@ -98,7 +121,7 @@ class DynamicROIDisplayWidget(QWidget):
             self.roi_start = pos
             self.roi_end = pos
             self.roi_coords = [pos.x(), pos.y(), pos.x(), pos.y()]
-
+            
     def mouseReleaseEvent(self, event):
         if not self.drag_enabled:
             return
@@ -117,8 +140,18 @@ class DynamicROIDisplayWidget(QWidget):
             return
         pos = event.pos()
         
+        # Get image boundaries
+        img_left = self.img_x_offset
+        img_right = self.img_x_offset + self.img_width
+        img_top = self.img_y_offset
+        img_bottom = self.img_y_offset + self.img_height
+        
         if self.drawing:
-            self.roi_end = pos
+            # When drawing, clamp the mouse position to the image boundaries
+            clamped_x = max(img_left, min(pos.x(), img_right))
+            clamped_y = max(img_top, min(pos.y(), img_bottom))
+            self.roi_end = QPoint(clamped_x, clamped_y)
+            
             self.roi_coords = [
                 min(self.roi_start.x(), self.roi_end.x()),
                 min(self.roi_start.y(), self.roi_end.y()),
@@ -131,6 +164,24 @@ class DynamicROIDisplayWidget(QWidget):
             dx = pos.x() - self.drag_start.x()
             dy = pos.y() - self.drag_start.y()
             
+            # Calculate new ROI coordinates
+            new_x1 = self.roi_coords[0] + dx
+            new_y1 = self.roi_coords[1] + dy
+            new_x2 = self.roi_coords[2] + dx
+            new_y2 = self.roi_coords[3] + dy
+            
+            # Check if new coordinates will be within image boundaries
+            if new_x1 < img_left:
+                dx = img_left - self.roi_coords[0]
+            elif new_x2 > img_right:
+                dx = img_right - self.roi_coords[2]
+                
+            if new_y1 < img_top:
+                dy = img_top - self.roi_coords[1]
+            elif new_y2 > img_bottom:
+                dy = img_bottom - self.roi_coords[3]
+            
+            # Apply the constrained movement
             self.roi_coords = [
                 self.roi_coords[0] + dx,
                 self.roi_coords[1] + dy,
@@ -142,10 +193,14 @@ class DynamicROIDisplayWidget(QWidget):
             self.update()
             
         elif self.resizing:
-            self.roi_coords[2] = pos.x()
-            self.roi_coords[3] = pos.y()
+            # Clamp the resize position to image boundaries
+            clamped_x = max(img_left, min(pos.x(), img_right))
+            clamped_y = max(img_top, min(pos.y(), img_bottom))
+            
+            self.roi_coords[2] = clamped_x
+            self.roi_coords[3] = clamped_y
             self.update()
-
+        
     def is_inside_roi(self, pos):
         return (self.roi_coords[0] <= pos.x() <= self.roi_coords[2] and
                 self.roi_coords[1] <= pos.y() <= self.roi_coords[3])

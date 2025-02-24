@@ -29,6 +29,8 @@ class MetavisionWidget(QWidget):
         self.is_recording = False
         self.events = None
         self.current_pattern = None
+        self.roi_control_mode = "drag"
+        
         self.event_list = []
         self.setup_ui()
         # Set window background color
@@ -90,7 +92,7 @@ class MetavisionWidget(QWidget):
         right_layout.addLayout(camera_header)
         
         # Initialize displayer first
-        self.displayer = DynamicROIDisplayWidget(parent_widget=self)
+        self.displayer = DynamicROIDisplayWidget()
         self.displayer.setStyleSheet(StyleSheetMain.DISPLAY_WIDGET)
         self.displayer.setMinimumSize(800, 600)
         
@@ -165,6 +167,7 @@ class MetavisionWidget(QWidget):
         self.manual_radio = QRadioButton("Manual Input")
         self.drag_radio = QRadioButton("Drag & Drop")
         self.drag_radio.setChecked(True)
+        self.drag_radio.toggled.connect(self.set_drag_mode)
         
         method_layout.addWidget(method_label)
         method_layout.addWidget(self.manual_radio)
@@ -177,22 +180,30 @@ class MetavisionWidget(QWidget):
 
         # X1, Y1 inputs
         input_grid.addWidget(QLabel("X1:"), 0, 0)
+        self.x1_input = QLineEdit()
+        self.x1_input.setText("400")
         self.x1_input = QLineEdit(str(self.roi[0]))
         self.x1_input.setPlaceholderText("0-1280")
         input_grid.addWidget(self.x1_input, 0, 1)
 
         input_grid.addWidget(QLabel("Y1:"), 0, 2)
+        self.y1_input = QLineEdit()
+        self.y1_input.setText("200")
         self.y1_input = QLineEdit(str(self.roi[1]))
         self.y1_input.setPlaceholderText("0-720")
         input_grid.addWidget(self.y1_input, 0, 3)
 
         # X2, Y2 inputs
         input_grid.addWidget(QLabel("X2:"), 1, 0)
+        self.x2_input = QLineEdit()
+        self.x2_input.setText("800")
         self.x2_input = QLineEdit(str(self.roi[2]))
         self.x2_input.setPlaceholderText("0-1280")
         input_grid.addWidget(self.x2_input, 1, 1)
 
         input_grid.addWidget(QLabel("Y2:"), 1, 2)
+        self.y2_input = QLineEdit()
+        self.y2_input.setText("470")
         self.y2_input = QLineEdit(str(self.roi[3]))
         self.y2_input.setPlaceholderText("0-720")
         input_grid.addWidget(self.y2_input, 1, 3)
@@ -254,6 +265,8 @@ class MetavisionWidget(QWidget):
             self.roi = new_roi
             self.wrapper.update_roi(new_roi)
             self.displayer.set_roi(new_roi)
+            self.roi_control_mode = "manual"
+            
             
             self.x1_input.setText(str(new_roi[0]))
             self.y1_input.setText(str(new_roi[1]))
@@ -270,6 +283,7 @@ class MetavisionWidget(QWidget):
 
     def on_roi_changed_from_drag(self, new_roi):
         """Handle ROI updates from drag & drop"""
+        
         self.wrapper.update_roi(new_roi)
         
         # Update input fields
@@ -282,6 +296,11 @@ class MetavisionWidget(QWidget):
         coord_str = f"ROI: ({new_roi[0]}, {new_roi[1]}) to ({new_roi[2]}, {new_roi[3]})"
         self.coordinates_label.setText(coord_str)
 
+
+    def set_drag_mode(self, drag_mode):
+        print(drag_mode)
+        self.roi_control_mode = drag_mode
+        
     def toggle_input_method(self, manual_enabled):
         """Enable/disable input fields based on selected method"""
         self.x1_input.setEnabled(manual_enabled)
@@ -609,7 +628,7 @@ class MetavisionWidget(QWidget):
 
         def on_cd_frame_cb(ts, cd_frame):
             frame = np.copy(cd_frame)
-            self.displayer.update_frame(frame)
+            self.displayer.update_frame(frame, self.roi_control_mode)
 
         event_frame_gen.set_output_callback(on_cd_frame_cb)
         
