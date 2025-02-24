@@ -8,8 +8,8 @@ from threading import Thread
 from metavision_API.live_replay_events_iterator import *
 from styles import StyleSheetMain
 from widgets.csv_display_widget import CSVAnalysisWindow
-from widgets.metavision_display_widget import MetavisionDisplayWidget
-from widgets.roi_select_widget import DynamicROIDisplayWidget
+from widgets.metavision_display_widget import DynamicROIDisplayWidget
+from widgets.metavsion_widget import DynamicROIDisplayWidget
 from widgets.smooth_pursuit_widget import SmoothPursuitWidget
 from widgets.saccade_pursuit_widget import SaccadePursuitWidget
 from PyQt5.QtGui import QIntValidator
@@ -22,13 +22,14 @@ class MetavisionWidget(QWidget):
         self.current_record_filename = "recording.raw"
         self.base_filename = "recording"
         self.recording_waiting_time = 5
+        self.roi = [400, 200, 800, 470]
         self.is_recording = False
-        self.setup_ui()
         self.events = None
-        self.event_list = []
         self.current_pattern = None
         self.roi_control_mode = "drag"
         
+        self.event_list = []
+        self.setup_ui()
         # Set window background color
         self.setAutoFillBackground(True)
         palette = self.palette()
@@ -178,12 +179,14 @@ class MetavisionWidget(QWidget):
         input_grid.addWidget(QLabel("X1:"), 0, 0)
         self.x1_input = QLineEdit()
         self.x1_input.setText("400")
+        self.x1_input = QLineEdit(str(self.roi[0]))
         self.x1_input.setPlaceholderText("0-1280")
         input_grid.addWidget(self.x1_input, 0, 1)
 
         input_grid.addWidget(QLabel("Y1:"), 0, 2)
         self.y1_input = QLineEdit()
         self.y1_input.setText("200")
+        self.y1_input = QLineEdit(str(self.roi[1]))
         self.y1_input.setPlaceholderText("0-720")
         input_grid.addWidget(self.y1_input, 0, 3)
 
@@ -191,12 +194,14 @@ class MetavisionWidget(QWidget):
         input_grid.addWidget(QLabel("X2:"), 1, 0)
         self.x2_input = QLineEdit()
         self.x2_input.setText("800")
+        self.x2_input = QLineEdit(str(self.roi[2]))
         self.x2_input.setPlaceholderText("0-1280")
         input_grid.addWidget(self.x2_input, 1, 1)
 
         input_grid.addWidget(QLabel("Y2:"), 1, 2)
         self.y2_input = QLineEdit()
         self.y2_input.setText("470")
+        self.y2_input = QLineEdit(str(self.roi[3]))
         self.y2_input.setPlaceholderText("0-720")
         input_grid.addWidget(self.y2_input, 1, 3)
 
@@ -229,10 +234,17 @@ class MetavisionWidget(QWidget):
                 raise ValueError("Coordinates must be within bounds")
                 
             new_roi = [x1, y1, x2, y2]
+            self.roi = new_roi
             self.wrapper.update_roi(new_roi)
             self.displayer.set_roi(new_roi)
             self.roi_control_mode = "manual"
             
+            
+            self.x1_input.setText(str(new_roi[0]))
+            self.y1_input.setText(str(new_roi[1]))
+            self.x2_input.setText(str(new_roi[2]))
+            self.y2_input.setText(str(new_roi[3]))
+
             # Update coordinate display
             coord_str = f"ROI: ({x1}, {y1}) to ({x2}, {y2})"
             self.coordinates_label.setText(coord_str)

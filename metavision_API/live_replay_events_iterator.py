@@ -35,7 +35,7 @@ def convert_coordinates(coord, max_width=1280, max_height=720):
 
 class LiveReplayEventsIteratorWrapper:
     def __init__(self, output_file, event_count, roi_coordinates, bias_file):
-        self.output_file = output_file
+        self.output_folder = output_file
         self.event_count = event_count
         self.roi_coordinates = roi_coordinates
         self.bias_file = bias_file
@@ -77,24 +77,23 @@ class LiveReplayEventsIteratorWrapper:
             fps=25,
             palette=ColorPalette.Gray
         )
-    
-    def stop_recording(self):
-        if self.device:
-            self.device.get_i_events_stream().stop_log_raw_data()
 
     def start_recording(self, recording_path):
-        if self.output_file != "":
-            recording_path = os.path.join(self.output_file, recording_path)
+        if self.output_folder != "":
+            # Create output folder if it doesn't exist
+            if not os.path.exists(self.output_folder):
+                os.makedirs(self.output_folder)
+                print(f'Created output directory: {self.output_folder}')
+                
+            recording_path = os.path.join(self.output_folder, recording_path)
+        
         self.device.get_i_events_stream().log_raw_data(recording_path)
         print(f'Recording to {recording_path}')
 
     def stop_recording(self):
         if self.device:
             self.device.get_i_events_stream().stop_log_raw_data()
-    
-    def initialize(self):
-        pass
-    
+
     def get_window(self):
         # Window - Graphical User Interface
         with MTWindow(title="Metavision Events Viewer", width=self.width, height=self.height,
