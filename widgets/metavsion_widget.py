@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QWidget, QLabel, QPushButton, QMessageBox
 
 class MetavisionWidget(QWidget):
-    def __init__(self, wrapper, parent=None):
+    def __init__(self, wrapper, parent=None, config_path=None):
         super().__init__(parent)
         self.wrapper = wrapper
         self.current_log_filename = "recording.csv"
@@ -30,6 +30,7 @@ class MetavisionWidget(QWidget):
         self.events = None
         self.current_pattern = None
         self.roi_control_mode = "drag"
+        self.config_path = config_path
         
         self.event_list = []
         self.setup_ui()
@@ -610,7 +611,7 @@ class MetavisionWidget(QWidget):
     def start_smooth_pursuit(self):
         """Start the smooth pursuit pattern"""
         self.start_recording()
-        self.current_pattern = SmoothPursuitWidget(self, "config/config_smooth.yaml", self.wrapper)
+        self.current_pattern = SmoothPursuitWidget(self, os.path.join(self.config_path, "config_smooth.yaml"), self.wrapper)
         if self.current_pattern is not None:
             self.current_pattern.showFullScreen()
             self.current_pattern.start_animation()
@@ -618,7 +619,7 @@ class MetavisionWidget(QWidget):
     def start_saccade_pursuit(self):
         """Start the saccade pattern"""
         self.start_recording()
-        self.current_pattern = SaccadePursuitWidget(self, "config/config_saccade.yaml", self.wrapper)
+        self.current_pattern = SaccadePursuitWidget(self, os.path.join(self.config_path ,"config_saccade.yaml"), self.wrapper)
         if self.current_pattern is not None:
             self.current_pattern.showFullScreen()
             self.current_pattern.start_animation()
@@ -635,8 +636,11 @@ class MetavisionWidget(QWidget):
         event_frame_gen = self.wrapper.get_event_frame_gen()
 
         def on_cd_frame_cb(ts, cd_frame):
-            frame = np.copy(cd_frame)
-            self.displayer.update_frame(frame, self.roi_control_mode)
+            if hasattr(self, 'events') and self.events is not None:
+                frame = self.wrapper.create_frame(self.events)
+                self.displayer.update_frame(frame, self.roi_control_mode)
+            else:
+                self.displayer.update_frame(cd_frame, self.roi_control_mode)
 
         event_frame_gen.set_output_callback(on_cd_frame_cb)
         
@@ -651,7 +655,7 @@ class MetavisionWidget(QWidget):
                 event_frame_gen.process_events(evs)
         except Exception as e:
             print(f"Error in Metavision pipeline: {str(e)}")
-    # Add the validation and change event methods to your class
+
     def validate_waiting_time(self, event):
         """Validate the waiting time when focus is lost"""
         try:
@@ -660,16 +664,13 @@ class MetavisionWidget(QWidget):
                 self.waiting_time_input.setText("5")
         except ValueError:
             self.waiting_time_input.setText("5")
-        # Call the parent class's focusOutEvent
         super(type(self), self).focusOutEvent(event)
 
     def on_waiting_time_changed(self, text):
         """Handle waiting time change event"""
         try:
             value = int(text) if text else 5
-            # Do something with the new value
             print(f"Waiting time changed to: {value}")
             self.recording_waiting_time = value
-            # You can emit a custom signal here or call other methods as needed
         except ValueError:
-            pass  # Invalid input, will be handled by validator
+            pass

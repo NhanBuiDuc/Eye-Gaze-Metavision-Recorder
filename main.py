@@ -3,6 +3,13 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from metavision_API.live_replay_events_iterator import *
 from widgets.metavsion_widget import MetavisionWidget
 
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+
 class MainApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -17,8 +24,11 @@ class MainApp(QMainWindow):
             bias_file=None
         )
         
+        base_path = get_base_path()
+        config_path = os.path.join(base_path, "configs")
+        
         # Create and set up the metavision widget
-        self.metavision_widget = MetavisionWidget(self.wrapper, self)
+        self.metavision_widget = MetavisionWidget(self.wrapper, self, config_path)
         self.setCentralWidget(self.metavision_widget)
         
         # Connect ROI update signal

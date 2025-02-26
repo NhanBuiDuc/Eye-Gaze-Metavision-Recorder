@@ -140,7 +140,7 @@ class SmoothPursuitWidget(QWidget):
         self.init_variables()
         self.display_widget = display_widget
     
-        self.pattern = SmoothPursuitPattern("config/config_smooth.yaml", self.display_widget)
+        self.pattern = SmoothPursuitPattern(config_path, self.display_widget)
         self.hide()
 
     def start_animation(self):

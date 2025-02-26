@@ -43,7 +43,7 @@ class DynamicROIDisplayWidget(QWidget):
         
     def update_frame(self, frame, flag_mode=None):
         if frame is not None:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = cv2.cvtColor(frame.img, cv2.COLOR_BGR2RGB)
             self.image = QImage(frame.data, frame.shape[1], frame.shape[0],
                             frame.strides[0], QImage.Format_RGB888)
             
