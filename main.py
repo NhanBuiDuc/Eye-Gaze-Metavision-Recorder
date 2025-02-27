@@ -21,15 +21,15 @@ class MainApp(QMainWindow):
         self.metavision_widget = MetavisionWidget(self.wrapper, self)
         self.setCentralWidget(self.metavision_widget)
         
-        # Connect ROI update signal
-        self.metavision_widget.displayer.roi_changed.connect(self.update_roi)
+        # # Connect ROI update signal
+        # self.metavision_widget.displayer.roi_changed.connect(self.update_roi)
         
         # Start the metavision pipeline
         self.metavision_widget.run_metavision()
 
-    def update_roi(self, new_roi):
-        """Update the ROI in the existing wrapper"""
-        self.wrapper.update_roi(new_roi)
+    # def update_roi(self, new_roi):
+    #     """Update the ROI in the existing wrapper"""
+    #     self.wrapper.update_roi(new_roi)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
