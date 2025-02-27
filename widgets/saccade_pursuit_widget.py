@@ -101,8 +101,8 @@ class SaccadePursuitWidget(QWidget):
         self.display_widget = display_widget
         
         self.pattern = SaccadePattern(config_path, self.display_widget, self.display_widget.current_saccade_part)
-        self.hide()
-        
+
+
     def init_variables(self):
         """Initialize variables for animation"""
         self.current_point_index = 0
@@ -111,6 +111,8 @@ class SaccadePursuitWidget(QWidget):
         self.pattern_points = self._generate_grid_points()
 
     def start_animation(self):
+        self.hide()
+        self.close()
         self.pattern.run()
 
     def end_animation(self):

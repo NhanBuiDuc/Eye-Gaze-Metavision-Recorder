@@ -141,9 +141,10 @@ class SmoothPursuitWidget(QWidget):
         self.display_widget = display_widget
     
         self.pattern = SmoothPursuitPattern("config/config_smooth.yaml", self.display_widget)
-        self.hide()
 
     def start_animation(self):
+        self.hide()
+        self.close()
         self.pattern.run()
 
     def end_animation(self):

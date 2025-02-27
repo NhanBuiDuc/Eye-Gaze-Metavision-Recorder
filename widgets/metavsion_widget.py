@@ -263,7 +263,7 @@ class MetavisionWidget(QWidget):
                 
             new_roi = [x1, y1, x2, y2]
             self.roi = new_roi
-            self.wrapper.update_roi(new_roi)
+            # self.wrapper.update_roi(new_roi)
             self.displayer.set_roi(new_roi)
             self.roi_control_mode = "manual"
             
@@ -515,15 +515,15 @@ class MetavisionWidget(QWidget):
         if not self.pattern_group.checkedButton():
             # No pattern selected
             return
-            
+        self.show()
         if self.pattern_group.checkedButton() == self.smooth_radio:
             self.start_smooth_pursuit()
         else:
             self.start_saccade_pursuit()
-            
+        self.show()
         if self.current_pattern is not None:            
             self.current_pattern.end_animation()
-
+        self.show()
     def create_file_settings_group(self):
         file_group = QGroupBox("File Settings")
         file_group.setStyleSheet(StyleSheetMain.GROUP_BOX)

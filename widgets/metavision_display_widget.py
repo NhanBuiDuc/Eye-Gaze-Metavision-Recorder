@@ -224,13 +224,29 @@ class DynamicROIDisplayWidget(QWidget):
             scaled_img = self.image.scaled(self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
             x = (self.width() - scaled_img.width()) // 2
             y = (self.height() - scaled_img.height()) // 2
+            
+            # Draw the full image with reduced opacity
+            painter.setOpacity(0.0)  # Make the background image semi-transparent
             painter.drawImage(x, y, scaled_img)
-        
-        # Draw the ROI rectangle
-        painter.setPen(QPen(QColor(255, 0, 0), 2, Qt.SolidLine))
-        painter.drawRect(
-            self.roi_coords[0],
-            self.roi_coords[1],
-            self.roi_coords[2] - self.roi_coords[0],
-            self.roi_coords[3] - self.roi_coords[1]
-        )
+            
+            # Reset opacity for the ROI
+            painter.setOpacity(1.0)
+            
+            # Calculate the portion of the image to display at full opacity
+            roi_x = self.roi_coords[0]
+            roi_y = self.roi_coords[1]
+            roi_width = self.roi_coords[2] - self.roi_coords[0]
+            roi_height = self.roi_coords[3] - self.roi_coords[1]
+            
+            # Create a clipping region for the ROI area
+            painter.setClipRect(roi_x, roi_y, roi_width, roi_height)
+            
+            # Draw the ROI portion at full opacity
+            painter.drawImage(x, y, scaled_img)
+            
+            # Remove the clipping to draw the border
+            painter.setClipping(False)
+            
+            # Draw the ROI rectangle outline
+            painter.setPen(QPen(QColor(255, 0, 0), 2, Qt.SolidLine))
+            painter.drawRect(roi_x, roi_y, roi_width, roi_height)
