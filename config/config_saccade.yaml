@@ -3,7 +3,7 @@ pattern:
   type: "saccade"               # Pattern type (saccade/pursuit)
   num_rows: 20                  # Number of grid rows
   num_cols: 80                  # Number of grid columns
-  num_points: 100              # Number of points to generate (less than or equal to num_rows * num_cols)
+  num_points: 1600              # Number of points to generate (less than or equal to num_rows * num_cols)
   margin: 50                    # Screen edge margin
   seed: 42                      # Random seed to maintain same appearance order each run
   show_countdown: true          # Enable/disable countdown display
