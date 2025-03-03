@@ -272,12 +272,26 @@ class SaccadePattern:
                                     tuple(colors['direction_arrow']), 2, tipLength=0.2)
                     
                     # Display countdown text below the circle
-                    countdown_text = f"{remaining:.1f}s"
-                    text_x = current_point[0] - 30  # Adjust for text width
-                    text_y = current_point[1] + 40  # Position below the circle
-                    
+
+                    running_time_text = f"{remaining:.1f}s"
+                    countdown_text = f"{int(point_count)}/{int(self.num_points / 10) }"
+
+                    running_time_text_x = current_point[0] - 30  # Adjust for text width
+                    running_time_text_y = current_point[1] + 40  # Position below the circle
+
+
+                    countdown_text_x = current_point[0] - 30  # Adjust for text width
+                    countdown_text_y = current_point[1] - 40  # Position below the circle
+
+                    cv2.putText(current_frame, running_time_text,
+                                (running_time_text_x, running_time_text_y),
+                                getattr(cv2, self.config['font']['type']),
+                                0.8,  # Font scale
+                                tuple(colors['text']),
+                                2)  # Thickness
+
                     cv2.putText(current_frame, countdown_text,
-                                (text_x, text_y),
+                                (countdown_text_x, countdown_text_y),
                                 getattr(cv2, self.config['font']['type']),
                                 0.8,  # Font scale
                                 tuple(colors['text']),

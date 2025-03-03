@@ -576,8 +576,8 @@ class MetavisionWidget(QWidget):
             coord_str = f"{x1}_{y1}_{x2}_{y2}"
             print(coord_str)
             self.base_filename = self.file_text_box.text()
-            self.current_log_filename = f"{coord_str}_{self.base_filename}_part{part}.csv"
-            self.current_record_filename = f"{coord_str}_{self.base_filename}_part{part}.raw"
+            self.current_log_filename = f"{coord_str}_{self.base_filename}_part{part+1}.csv"
+            self.current_record_filename = f"{coord_str}_{self.base_filename}_part{part+1}.raw"
 
         print(f"Log file: {self.current_log_filename}")
         print(f"Record file: {self.current_record_filename}")
