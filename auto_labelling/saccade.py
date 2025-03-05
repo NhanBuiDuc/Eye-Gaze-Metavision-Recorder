@@ -311,9 +311,10 @@ class SaccadePattern:
                     # Small sleep to avoid hogging CPU
                     time.sleep(0.01)
 
-            # Show thank you message at the end
-            self.show_thank_you()
-            
+            # # Show thank you message at the end
+            # self.show_thank_you()
+            return
+        
         finally:
             self.cleanup()
 
