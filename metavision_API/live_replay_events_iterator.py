@@ -49,7 +49,7 @@ class LiveReplayEventsIteratorWrapper:
             for name, bias in bias_settings.biases.items():
                 biases.set(name, bias.value)
                 
-        self.mv_iterator = EventsIterator.from_device(self.device, start_ts=0, n_events=event_count, delta_t=33333, mode="delta_t")
+        self.mv_iterator = EventsIterator.from_device(self.device, start_ts=0, delta_t=33333, mode="delta_t")
         # self.device.get_i_erc_module().enable(True)
         # self.device.get_i_erc_module().set_cd_event_count(event_count=self.event_count)
         
@@ -76,7 +76,7 @@ class LiveReplayEventsIteratorWrapper:
         return PeriodicFrameGenerationAlgorithm(
             sensor_width=self.width, 
             sensor_height=self.height,
-            fps=25,
+            fps=33,
             palette=ColorPalette.Gray
         )
 
@@ -108,7 +108,7 @@ class LiveReplayEventsIteratorWrapper:
 
             # Event Frame Generator
             event_frame_gen = PeriodicFrameGenerationAlgorithm(sensor_width=self.width, sensor_height=self.height, fps=25,
-                                                            palette=ColorPalette.Dark)
+                                                            palette=ColorPalette.Gray)
 
             def on_cd_frame_cb(ts, cd_frame):
                 window.show_async(cd_frame)
