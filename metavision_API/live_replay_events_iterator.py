@@ -54,20 +54,22 @@ class LiveReplayEventsIteratorWrapper:
         # self.device.get_i_erc_module().set_cd_event_count(event_count=self.event_count)
         
         # Get ROI module
-        # self.I_ROI = self.device.get_i_roi()
-        # self.update_roi(self.roi_coordinates)
+        self.I_ROI = self.device.get_i_roi()
+        self.update_roi(self.roi_coordinates)
         
         self.height, self.width = self.mv_iterator.get_size()
         
-    # def update_roi(self, new_coordinates):
-    #     """Update ROI window without recreating the device"""
-    #     self.roi_coordinates = new_coordinates
-    #     x, y, width, height = convert_coordinates(new_coordinates)
+    def update_roi(self, new_coordinates, flag_full=True):
+        """Update ROI window without recreating the device"""
         
-    #     # Create and set new ROI window
-    #     roi_window = self.I_ROI.Window(x, y, width, height)
-    #     self.I_ROI.set_window(roi_window)
-    #     self.I_ROI.enable(True)
+        if not flag_full:
+            self.roi_coordinates = new_coordinates
+            x, y, width, height = convert_coordinates(new_coordinates)
+            
+            # Create and set new ROI window
+            roi_window = self.I_ROI.Window(x, y, width, height)
+            self.I_ROI.set_window(roi_window)
+            self.I_ROI.enable(True)
 
 
     def get_event_frame_gen(self):

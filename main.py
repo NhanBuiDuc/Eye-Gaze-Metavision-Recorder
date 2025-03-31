@@ -13,7 +13,7 @@ class MainApp(QMainWindow):
         self.wrapper = LiveReplayEventsIteratorWrapper(
             output_file="public/recordings",
             event_count=1000000,
-            roi_coordinates=[0,0,1280,720],
+            roi_coordinates=[300,200,900,600],
             bias_file="eye_tracking_b1.bias"
         )
         
@@ -22,14 +22,14 @@ class MainApp(QMainWindow):
         self.setCentralWidget(self.metavision_widget)
         
         # # Connect ROI update signal
-        # self.metavision_widget.displayer.roi_changed.connect(self.update_roi)
+        self.metavision_widget.displayer.roi_changed.connect(self.update_roi)
         
         # Start the metavision pipeline
         self.metavision_widget.run_metavision()
 
-    # def update_roi(self, new_roi):
-    #     """Update the ROI in the existing wrapper"""
-    #     self.wrapper.update_roi(new_roi)
+    def update_roi(self, new_roi):
+        """Update the ROI in the existing wrapper"""
+        self.wrapper.update_roi(new_roi, flag_full=False)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -24,7 +24,7 @@ class DynamicROIDisplayWidget(QWidget):
         self.resize_margin = 10  # pixels
         
         # Initial ROI coordinates
-        self.roi_coords = [0,0,1280,720]
+        self.roi_coords = [300,200,900,600]
         self.drag_enabled = True
         
         # Enable mouse tracking

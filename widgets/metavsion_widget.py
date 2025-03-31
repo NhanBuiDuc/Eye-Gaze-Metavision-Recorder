@@ -42,7 +42,7 @@ class MetavisionWidget(QWidget):
         self.recording_waiting_time = 5
         self.current_saccade_part = 1
         self.current_starting_timestamp = 0
-        self.roi = [0,0,1280,720]
+        self.roi = [300,200,900,600]
         self.is_recording = False
         self.events = None
         self.current_pattern_obj = None
