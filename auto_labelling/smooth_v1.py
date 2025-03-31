@@ -397,10 +397,6 @@ class SmoothPursuitPattern:
                              point_config['size'] * 2,  
                              point_color,
                              point_config['thickness'])
-                    cv2.circle(current_frame, (latest_x, latest_y),
-                        point_config['size'] ,  
-                        [0, 0, 255],
-                        point_config['thickness'])
                     
                 cv2.imshow(self.window_name, current_frame)
                 

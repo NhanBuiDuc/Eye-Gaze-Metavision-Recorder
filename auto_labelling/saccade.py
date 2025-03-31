@@ -8,213 +8,292 @@ import yaml
 import csv
 from datetime import datetime
 import math
+import time
 
-class SaccadePattern:
-    def __init__(self, config_path="config.yaml", widget=None, random_part_no=0):
+class SaccadePursuitPattern:
+    def __init__(self, part, config_path=None, widget=None):
         try:
             with open(config_path, 'r', encoding='utf-8') as file:
                 self.config = yaml.safe_load(file)
         except Exception as e:
             print(f"Error reading config file: {e}")
             raise
-
+        
         self.widget = widget
         self.is_fullscreen = True
-        self.random_part_no = random_part_no  # New parameter for part selection
-
+        if part == 0:
+            self.direction_first = "horizontal"
+            self.margin_size = "small"
+        if part == 1:
+            self.direction_first = "horizontal"
+            self.margin_size = "medium"
+        if part == 2:
+            self.direction_first = "horizontal"
+            self.margin_size = "large"
+        if part == 3:
+            self.direction_first = "vertical"
+            self.margin_size = "small"
+        if part == 4:
+            self.direction_first = "vertical"
+            self.margin_size = "medium"
+        if part == 5:
+            self.direction_first = "vertical"
+            self.margin_size = "large"
+        self.total_num_points = self.config['pattern'].get('num_points', 50)
         # Get screen dimensions
         self.monitor = get_monitors()[0]
         self.width = self.monitor.width
         self.height = self.monitor.height
-        
+
+        self.countdown_xy = [50, 200]
         self.root_path = self.config['save']['root_path']
         os.makedirs(self.root_path, exist_ok=True)
 
         # Initialize pattern parameters from config
         pattern_config = self.config['pattern']
-        self.num_rows = pattern_config['num_rows']
-        self.num_cols = pattern_config['num_cols']
-        self.num_points = min(pattern_config['num_points'], self.num_rows * self.num_cols)
-        self.margin = pattern_config['margin']
-        self.seed = pattern_config.get('seed', 42)  # Default seed if not specified
-        self.show_direction = pattern_config.get('show_direction', True)
+        self.num_rows = pattern_config.get('num_rows', 10)
+        self.points_per_row = pattern_config.get('points_per_row', pattern_config.get('num_cols', 20))
+        self.margin = pattern_config.get('margin', 50)
+        self.tail_points = pattern_config.get('tail_points', 10)
         
-        # Initialize timing parameters
+        # Initialize timing parameters based on margin size
         timing_config = self.config['timing']
-        self.point_delay = timing_config['point_duration']
-        
+        if self.margin_size == "small":
+            self.point_delay = 1.2 # 0.5 seconds for medium margin
+        elif self.margin_size == "medium":
+            self.point_delay = 1.5  # 0.5 seconds for medium margin
+        else:  # large
+            self.point_delay = 1.5  # 1.0 second for large margin
+            
         try:
-            self.countdown_seconds = widget.recording_waiting_time
+            self.countdown_seconds = widget.recording_waiting_time if widget else timing_config.get('countdown_seconds', 3)
         except:
-            self.countdown_seconds = timing_config['countdown_seconds']
-
-        self.thank_you_duration = timing_config['thank_you_duration']
-        
+            self.countdown_seconds = timing_config.get('countdown_seconds', 3)
+            
         # Initialize window
         window_config = self.config['window']
-        self.window_name = window_config['name']
+        self.window_name = window_config.get('name', 'Smooth Pursuit Pattern')
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         
         # Initialize log file
-        self.log_file = os.path.join(self.root_path, widget.current_log_filename) if widget else "saccade_log.csv"
-        
+        self.log_file = os.path.join(self.root_path, widget.current_label_filename) if widget else "saccade_log.csv"
         with open(self.log_file, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Timestamp_ms', 'Point_Index', 'X', 'Y', 'Next_X', 'Next_Y', 'Screen_Width', 'Screen_Height'])
         
-        # Generate grid points
-        random.seed(self.seed)
-        self.points = self._generate_grid_points()
         self.start_time = None
+        
+        # Pre-calculate all points
+        self.all_points = self.calculate_all_points()
 
-    def _handle_keyboard_input(self, key):
-        """Handle keyboard events for window control"""
-        if key == ord('f') or key == ord('F'):  # F key for fullscreen toggle
-            self.is_fullscreen = not self.is_fullscreen
-            if self.is_fullscreen:
-                cv2.setWindowProperty(self.window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-            else:
-                cv2.setWindowProperty(self.window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
-            return True
-        return True
-
-    def _generate_grid_points(self):
-        """Generate grid points and select random required number of points"""
-        # Generate all grid points
+    def calculate_all_points(self):
+        """
+        Calculate all points for the zigzag pattern based on the margin_size parameter
+        and direction_first parameter.
+        
+        Returns:
+            List of tuples (row, point_index, x, y) for each point in the pattern.
+        """
         all_points = []
-        row_spacing = (self.height - 2 * self.margin) / (self.num_rows - 1)
-        col_spacing = (self.width - 2 * self.margin) / (self.num_cols - 1)
-        
-        for row in range(self.num_rows):
-            y = self.margin + row * row_spacing
-            for col in range(self.num_cols):
-                x = self.margin + col * col_spacing
-                all_points.append((int(x), int(y)))
-        
-        # Randomly shuffle all points with fixed seed
-        random.seed(self.seed)
-        random.shuffle(all_points)
-        
-        # Take only the number of points we need
-        filtered_points = all_points[:self.num_points]
-        
-        # Divide points into 10 equal parts
-        points_per_part = math.ceil(len(filtered_points) / 10)
-        
-        # Ensure random_part_no is between 0 and 9
-        part_index = max(0, min(9, self.random_part_no))
-        
-        # Get the points for the selected part
-        start_idx = part_index * points_per_part
-        end_idx = min(start_idx + points_per_part, len(filtered_points))
-        
-        selected_points = filtered_points[start_idx:end_idx]
-        
-        return selected_points
 
-    def log_point(self, timestamp_ms, point_index, current_point, next_point=None):
-        """Log point data to CSV file"""
-        with open(self.log_file, 'a', newline='') as file:
-            writer = csv.writer(file)
-            next_x = next_point[0] if next_point else None
-            next_y = next_point[1] if next_point else None
-            writer.writerow([timestamp_ms, point_index, current_point[0], current_point[1], 
-                           next_x, next_y, self.width, self.height])
 
-    def _create_blank_image(self):
-        """Create blank background image"""
-        bg_color = self.config['colors']['background']
-        return np.array(bg_color, dtype=np.uint8) * np.ones((self.height, self.width, 3))
-
-    def _wait_key(self, duration):
-        """Wait for keyboard input for specified duration"""
-        start_time = time.time()
-        while (time.time() - start_time) < duration:
-            key = cv2.waitKey(1) & 0xFF
-            if key != 255:  # If a key was pressed
-                return self._handle_keyboard_input(key)
-        return True
-
-    def show_countdown(self):
-        """Display countdown"""
-        text_config = self.config['countdown_text']
-        colors = self.config['colors']
+        current_point = [50, 50]  # Start from top-left with margin
+        starting_x = 50
+        starting_y = 50 
+        # Extract x and y from the starting point
+        x, y = current_point
+        if self.margin_size == "small":
+            h_quarter_step_full = int(self.width * 0.25)  # 25% of screen width
+            v_quarter_step_full = int(self.height * 0.25)  # 25% of screen height 
+        # Calculate step sizes based on margin_size and total_num_points
+        elif self.margin_size == "medium":
+            h_half_step_full = int(self.width * 0.5)  # 50% of screen width
+            v_half_step_full = int(self.height * 0.5)  # 50% of screen height
+        else:  # large
+            h_step_full = int(self.width - starting_x - 50)
+            v_step_full = int(self.height - starting_x - 50)
         
-        for i in range(self.countdown_seconds, 0, -1):
-            image = self._create_blank_image()
-            text = str(i)
-            cv2.putText(image, text, 
-                       tuple(text_config['position']),
-                       getattr(cv2, self.config['font']['type']), 
-                       text_config['font_scale'],
-                       tuple(colors['text']),
-                       text_config['thickness'])
-            cv2.imshow(self.window_name, image)
+        # Calculate vertical and horizontal steps to distribute points evenly
+        if self.direction_first == "horizontal":
+            if self.margin_size == "small":
+                quater_num_points = self.total_num_points // 4
+                current_usable_height = self.height - starting_y - 50
+                v_step = int(current_usable_height // quater_num_points)            
+            elif self.margin_size == "medium":
+                half_num_points = self.total_num_points // 2
+                current_usable_height = self.height - starting_y - 50
+                v_step = int(current_usable_height // half_num_points)
+            elif self.margin_size == "large":
+                current_usable_height = self.height - starting_y
+                v_step = int(current_usable_height // self.total_num_points)
+        else:  # vertical
+            if self.margin_size == "small":
+                quater_num_points = self.total_num_points // 4
+                current_usable_width = self.width - starting_x - 50
+                h_step = int(current_usable_width // quater_num_points)
+            elif self.margin_size == "medium":
+                half_num_points = self.total_num_points // 2
+                current_usable_width = self.width - starting_x - 50
+                h_step = int(current_usable_width // half_num_points)
+            elif self.margin_size == "large":
+                current_usable_width = self.width - starting_x - 50
+                h_step = int(current_usable_width // self.total_num_points)
+        
+        left = True # Alternate between left and right
+        up = True
+
+        x = starting_x
+        y = starting_y
+        touch_boundary = False
+        nth_boundary_tourch = 0
+        for i in range(self.total_num_points):
+            if self.direction_first == "horizontal":
+                if self.margin_size == "small":
+                    if nth_boundary_tourch == 0:
+                        if left:
+                            x = starting_x  # half screen size
+                            left = False
+                        else:
+                            x = h_quarter_step_full - 50 # half screen size
+                            left = True
+                        y = y + v_step
+                    elif nth_boundary_tourch == 1:
+                        if left:
+                            x = h_quarter_step_full # half screen size
+                            left = False
+                        else:
+                            x = h_quarter_step_full * 2  - 50  # half screen size
+                            left = True
+                        y = y - v_step
+                    elif nth_boundary_tourch == 2:
+                        if left:
+                            x = h_quarter_step_full * 2 # half screen size
+                            left = False
+                        else:
+                            x = h_quarter_step_full * 3 - 50  # half screen size
+                            left = True
+                        y = y + v_step
+                    elif nth_boundary_tourch == 3:
+                        if left:
+                            x = h_quarter_step_full * 3 # half screen size
+                            left = False
+                        else:
+                            x = h_quarter_step_full * 4 - 50 # half screen size
+                            left = True
+                        y = y - v_step
+                    if nth_boundary_tourch % 2 == 0:
+                        if (y + v_step) > self.height - 50:
+                            nth_boundary_tourch += 1
+                            left = True
+                    else:
+                        if (y - v_step) < 50:
+                            nth_boundary_tourch += 1
+                            left = True
+                if self.margin_size == "medium":
+                    if not touch_boundary:
+                        if left:
+                            x = starting_x  # half screen size
+                            left = False
+                        else:
+                            x = starting_x + h_half_step_full - 50 # half screen size
+                            left = True
+                        y = y + v_step
+                    else:
+                        if left:
+                            x = h_half_step_full  # half screen size
+                            left = False
+                        else:
+                            x = h_half_step_full + h_half_step_full - 50 # half screen size
+                            left = True
+                        y = y - v_step
+                    if (y + v_step) > self.height - 50:
+                        touch_boundary = True
+                        left = True
+                elif self.margin_size == "large":
+                    if left:
+                        x = starting_x  # half screen size
+                        left = False
+                    else:
+                        x = starting_x + h_step_full - 50  # half screen size
+                        left = True
+                    y = y + v_step
+        
+            elif self.direction_first == "vertical":
+                if self.margin_size == "small":
+                    if nth_boundary_tourch == 0:
+                        if up:
+                            y = starting_y  # half screen size
+                            up = False
+                        else:
+                            y= v_quarter_step_full - 50 # half screen size
+                            up = True
+                        x = x + h_step
+                    elif nth_boundary_tourch == 1:
+                        if up:
+                            y = v_quarter_step_full # half screen size
+                            up = False
+                        else:
+                            y = v_quarter_step_full * 2  - 50  # half screen size
+                            up = True
+                        x = x - h_step
+                    elif nth_boundary_tourch == 2:
+                        if up:
+                            y = v_quarter_step_full * 2 # half screen size
+                            up = False
+                        else:
+                            y = v_quarter_step_full * 3 - 50  # half screen size
+                            up = True
+                        x = x + h_step
+                    elif nth_boundary_tourch == 3:
+                        if up:
+                            y = v_quarter_step_full * 3 # half screen size
+                            up = False
+                        else:
+                            y = v_quarter_step_full * 4 - 50 # half screen size
+                            up = True
+                        x = x - h_step
+                    if nth_boundary_tourch % 2 == 0:
+                        if (x + h_step) > self.width - 50:
+                            nth_boundary_tourch += 1
+                            up = True
+                    else:
+                        if (x - h_step) < 50:
+                            nth_boundary_tourch += 1
+                            up = True
+                if self.margin_size == "medium":
+                    if not touch_boundary:
+                        if up:
+                            y = starting_y
+                            up = False
+                        else:
+                            y = starting_y + v_half_step_full - 50 # half screen size
+                            up = True
+                        x = x + h_step
+                    else:
+                        if up:
+                            y = v_half_step_full  # half screen size
+                            up = False
+                        else:
+                            y = v_half_step_full + v_half_step_full - 50 # half screen size
+                            up = True
+                        x = x - h_step
+                    if (x + h_step) > self.width - 50:
+                        touch_boundary = True
+                        up = True
+                elif self.margin_size == "large":
+                    if up:
+                        y = starting_y  # half screen size
+                        up = False
+                    else:
+                        y = starting_y + v_step_full  # half screen size
+                        up = True
+                    x = x + h_step
             
-            if not self._wait_key(1.0):
-                return False
-        return True
-
-    def cleanup(self):
-        """Clean up resources and close windows"""
-        cv2.destroyAllWindows()
-
-    def draw_heart(self, image, center, size):
-        """Draw heart shape"""
-        heart_color = tuple(self.config['colors']['heart'])
-        x, y = center
-        radius = size // 2
+            # Add the new point to the list
+            all_points.append([x, y])
         
-        cv2.circle(image, (x - radius, y), radius, heart_color, -1)
-        cv2.circle(image, (x + radius, y), radius, heart_color, -1)
-        
-        triangle_pts = np.array([
-            [x - size, y],
-            [x + size, y],
-            [x, y + size]
-        ])
-        cv2.fillPoly(image, [triangle_pts], heart_color)
-
-    def show_thank_you(self):
-        """Show thank you message with heart icon"""
-        text_config = self.config['thank_you_text']
-        heart_config = self.config['heart']
-        colors = self.config['colors']
-        
-        image = self._create_blank_image()
-        messages = text_config['messages']
-        text = random.choice(messages)
-        
-        font = getattr(cv2, self.config['font']['type'])
-        font_scale = text_config['font_scale']
-        thickness = text_config['thickness']
-        
-        text_size = cv2.getTextSize(text, font, font_scale, thickness)[0]
-        heart_size = heart_config['size']
-        
-        total_width = text_size[0] + heart_config['offset'] + heart_size * 2
-        center_x = self.width // 2
-        center_y = self.height // 2
-        
-        text_x = center_x - total_width // 2
-        text_y = center_y + text_size[1] // 2
-        
-        cv2.putText(image, text,
-                    (text_x, text_y),
-                    font,
-                    font_scale,
-                    tuple(colors['text']),
-                    thickness)
-        
-        heart_x = text_x + text_size[0] + heart_config['offset']
-        heart_y = text_y - text_size[1] // 2
-        self.draw_heart(image, (heart_x, heart_y), heart_size)
-        
-        cv2.imshow(self.window_name, image)
-        if not self._wait_key(self.thank_you_duration):
-            return False
-        return True
-
+        return all_points
+                
     def run(self):
         """Run main program"""
         # Initial window setup
@@ -228,17 +307,17 @@ class SaccadePattern:
         point_config = self.config['point']
         colors = self.config['colors']
         current_timestamp = 0
-        
+        line_colors = self.config['colors']["line"]
         try:
             point_count = 0
             
-            for i, current_point in enumerate(self.points):
+            for i, current_point in enumerate(self.all_points):
                 # Check if we should continue running
                 if hasattr(self.widget, 'is_recording') and not self.widget.is_recording:
                     self.cleanup()
                     return False
 
-                next_point = self.points[i + 1] if i < len(self.points) - 1 else None
+                next_point = self.all_points[i+1] if i < len(self.all_points) - 1 else None
 
                 try:
                     timestamp_ms = self.widget.events[-1][3] if self.widget else int(time.time() * 1000)
@@ -247,7 +326,7 @@ class SaccadePattern:
                     timestamp_ms = current_timestamp
 
                 point_count += 1
-                self.log_point(timestamp_ms, i, current_point, next_point)
+                self.log_point(timestamp_ms, point_count, current_point, next_point)
                 
                 # Start time for this specific point
                 point_start_time = time.time()
@@ -267,14 +346,13 @@ class SaccadePattern:
                             point_config['thickness'])
 
                     # Draw direction arrow if enabled
-                    if self.show_direction and next_point:
-                        cv2.arrowedLine(current_frame, current_point, next_point,
-                                    tuple(colors['direction_arrow']), 2, tipLength=0.2)
-                    
+                    if next_point:
+                        cv2.line(current_frame, current_point, next_point, line_colors, 1, cv2.LINE_AA)
+
                     # Display countdown text below the circle
 
                     running_time_text = f"{remaining:.1f}s"
-                    countdown_text = f"{int(point_count)}/{int(self.num_points / 10) }"
+                    countdown_text = f"{int(point_count)}/{len(self.all_points) }"
 
                     running_time_text_x = current_point[0] - 30  # Adjust for text width
                     running_time_text_y = current_point[1] + 40  # Position below the circle
@@ -318,10 +396,88 @@ class SaccadePattern:
         finally:
             self.cleanup()
 
-# def main():
-#     # You can specify the part number (0-9) as the third parameter
-#     pattern = SaccadePattern("config/config_saccade.yaml", random_part_no=0)
-#     pattern.run()
+    def _handle_keyboard_input(self, key):
+        """Handle keyboard events for window control"""
+        if key == ord('f') or key == ord('F'):  # F key for fullscreen toggle
+            self.is_fullscreen = not self.is_fullscreen
+            if self.is_fullscreen:
+                cv2.setWindowProperty(self.window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            else:
+                cv2.setWindowProperty(self.window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
+            return True
+        elif key == 27:  # ESC key to exit
+            return False
+        return True
 
-# if __name__ == "__main__":
-#     main()
+    def log_point(self, timestamp_ms, point_index, current_point, next_point=None):
+        """Log point data to CSV file"""
+        if next_point:
+            with open(self.log_file, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([timestamp_ms, point_index, current_point[0], current_point[1], next_point[0], next_point[1], self.width, self.height])
+        else:
+            with open(self.log_file, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([timestamp_ms, point_index, current_point[0], current_point[1], 0, 0, self.width, self.height])        
+    def _create_blank_image(self):
+        """Create dark royal blue background image"""
+        bg_color = self.config.get('colors', {}).get('background', [50, 20, 205])
+        print(f"Creating background with color: {bg_color}")
+        image = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+        image[:] = bg_color
+        # Check a pixel to verify
+        print(f"Pixel color check: {image[0,0]}")
+        return image
+
+    def _wait_key(self, duration):
+        """Wait for keyboard input for specified duration"""
+        start_time = time.time()
+        while (time.time() - start_time) < duration:
+            key = cv2.waitKey(1) & 0xFF
+            if key != 255:  # If a key was pressed
+                return self._handle_keyboard_input(key)
+        return True
+
+    def show_countdown(self):
+        """Display countdown"""
+        text_config = self.config.get('countdown_text', {})
+        colors = self.config.get('colors', {})
+        text_color = colors.get('text', [255, 255, 255])  # Default white if not specified
+        
+        for i in range(self.countdown_seconds, 0, -1):
+            image = self._create_blank_image()
+            text = str(i)
+
+            # Calculate center position
+            text_size = cv2.getTextSize(
+                text, 
+                getattr(cv2, self.config.get('font', {}).get('type', 'FONT_HERSHEY_SIMPLEX')), 
+                text_config.get('font_scale', 5),
+                text_config.get('thickness', 5)
+            )[0]
+
+            position = self.countdown_xy
+            
+            cv2.putText(image, text, 
+                       tuple(position),
+                       getattr(cv2, self.config.get('font', {}).get('type', 'FONT_HERSHEY_SIMPLEX')), 
+                       text_config.get('font_scale', 5),
+                       tuple(text_color),
+                       text_config.get('thickness', 5))
+            cv2.imshow(self.window_name, image)
+            
+            if not self._wait_key(1.0):
+                return False
+        return True
+    
+    def cleanup(self):
+        """Clean up resources and close windows"""
+        cv2.destroyAllWindows()
+        # Add any additional cleanup needed
+
+# Example usage:
+# pattern = SaccadePursuitPattern(
+#     config_path="config/config_saccade.yaml",
+#     part=4
+# )
+# pattern.run()

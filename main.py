@@ -12,9 +12,9 @@ class MainApp(QMainWindow):
         # Create wrapper instance with initial ROI
         self.wrapper = LiveReplayEventsIteratorWrapper(
             output_file="public/recordings",
-            event_count=100000,
-            roi_coordinates=[398,131,796,400],
-            bias_file=None
+            event_count=1000000,
+            roi_coordinates=[0,0,1280,720],
+            bias_file="eye_tracking_b1.bias"
         )
         
         # Create and set up the metavision widget

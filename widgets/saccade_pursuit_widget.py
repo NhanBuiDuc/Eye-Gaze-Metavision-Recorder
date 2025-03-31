@@ -4,7 +4,7 @@ from PyQt5.QtGui import QPainter, QColor, QFont
 from PyQt5.QtCore import Qt, QTimer, QPoint, pyqtSignal
 import yaml
 import cv2
-from auto_labelling.saccade import SaccadePattern  # Assuming this is the correct import path
+from auto_labelling.saccade import SaccadePursuitPattern  # Assuming this is the correct import path
 
 class SaccadeAnimation(QWidget):
     def __init__(self, point_config, colors, pattern_points, point_duration, show_direction=True):
@@ -100,15 +100,13 @@ class SaccadePursuitWidget(QWidget):
         self.init_variables()
         self.display_widget = display_widget
         
-        self.pattern = SaccadePattern(config_path, self.display_widget, self.display_widget.current_saccade_part)
-
+        self.pattern = SaccadePursuitPattern(self.display_widget.current_saccade_part, config_path, self.display_widget)
 
     def init_variables(self):
         """Initialize variables for animation"""
         self.current_point_index = 0
         self.state = 'countdown'
         self.countdown_value = self.countdown_seconds
-        self.pattern_points = self._generate_grid_points()
 
     def start_animation(self):
         self.hide()
@@ -139,9 +137,9 @@ class SaccadePursuitWidget(QWidget):
 
         # Initialize pattern parameters from config
         pattern_config = self.config['pattern']
-        self.num_rows = pattern_config['num_rows']
-        self.num_cols = pattern_config['num_cols']
-        self.num_points = min(pattern_config['num_points'], self.num_rows * self.num_cols)
+        # self.num_rows = pattern_config['num_rows']
+        # self.num_cols = pattern_config['num_cols']
+        self.num_points = pattern_config['num_points']
         self.margin = pattern_config['margin']
         self.show_direction = pattern_config.get('show_direction', True)
 
@@ -158,28 +156,28 @@ class SaccadePursuitWidget(QWidget):
         self.text_color = QColor(*self.colors['text'])
         self.heart_color = QColor(*self.colors['heart'])
 
-    def _generate_grid_points(self):
-        """Generate grid points for the pattern"""
-        points = []
-        screen = QDesktopWidget().screenGeometry()
-        width, height = screen.width(), screen.height()
+    # def _generate_grid_points(self):
+    #     """Generate grid points for the pattern"""
+    #     points = []
+    #     screen = QDesktopWidget().screenGeometry()
+    #     width, height = screen.width(), screen.height()
         
-        row_spacing = (height - 2 * self.margin) / (self.num_rows - 1)
-        col_spacing = (width - 2 * self.margin) / (self.num_cols - 1)
+    #     row_spacing = (height - 2 * self.margin) / (self.num_rows - 1)
+    #     col_spacing = (width - 2 * self.margin) / (self.num_cols - 1)
         
-        for row in range(self.num_rows):
-            y = self.margin + row * row_spacing
-            for col in range(self.num_cols):
-                x = self.margin + col * col_spacing
-                points.append(QPoint(int(x), int(y)))
+    #     for row in range(self.num_rows):
+    #         y = self.margin + row * row_spacing
+    #         for col in range(self.num_cols):
+    #             x = self.margin + col * col_spacing
+    #             points.append(QPoint(int(x), int(y)))
         
-        # Randomly select required points if specified
-        if hasattr(self, 'num_points'):
-            import random
-            random.shuffle(points)
-            points = points[:self.num_points]
+    #     # Randomly select required points if specified
+    #     if hasattr(self, 'num_points'):
+    #         import random
+    #         random.shuffle(points)
+    #         points = points[:self.num_points]
             
-        return points
+    #     return points
 
     # def closeEvent(self, event):
     #     # Make sure to clean up CV2 windows when widget is closed

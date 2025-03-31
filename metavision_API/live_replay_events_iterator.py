@@ -40,7 +40,7 @@ class LiveReplayEventsIteratorWrapper:
         self.roi_coordinates = roi_coordinates
         self.bias_file = bias_file
         
-        self.device = initiate_device("")
+        self.device = initiate_device("", do_time_shifting=False)
         
         # Apply bias settings if provided
         if self.bias_file:
@@ -49,9 +49,9 @@ class LiveReplayEventsIteratorWrapper:
             for name, bias in bias_settings.biases.items():
                 biases.set(name, bias.value)
                 
-        self.mv_iterator = EventsIterator.from_device(self.device)
-        self.device.get_i_erc_module().enable(True)
-        self.device.get_i_erc_module().set_cd_event_count(event_count=self.event_count)
+        self.mv_iterator = EventsIterator.from_device(self.device, start_ts=0, n_events=event_count, delta_t=33333, mode="delta_t")
+        # self.device.get_i_erc_module().enable(True)
+        # self.device.get_i_erc_module().set_cd_event_count(event_count=self.event_count)
         
         # Get ROI module
         # self.I_ROI = self.device.get_i_roi()
@@ -121,7 +121,3 @@ class LiveReplayEventsIteratorWrapper:
 
                 if window.should_close():
                     break
-
-if __name__ == "__main__":
-    metavision_displayer = LiveReplayEventsIteratorWrapper(event_count=1000, roi_coordinates=[400, 200, 800, 470])
-    metavision_displayer.get_window()
