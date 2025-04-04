@@ -21,22 +21,22 @@ class SaccadePursuitPattern:
         
         self.widget = widget
         self.is_fullscreen = True
-        if part == 0:
-            self.direction_first = "horizontal"
-            self.margin_size = "small"
         if part == 1:
             self.direction_first = "horizontal"
-            self.margin_size = "medium"
+            self.margin_size = "small"
         if part == 2:
             self.direction_first = "horizontal"
-            self.margin_size = "large"
+            self.margin_size = "medium"
         if part == 3:
-            self.direction_first = "vertical"
-            self.margin_size = "small"
+            self.direction_first = "horizontal"
+            self.margin_size = "large"
         if part == 4:
             self.direction_first = "vertical"
-            self.margin_size = "medium"
+            self.margin_size = "small"
         if part == 5:
+            self.direction_first = "vertical"
+            self.margin_size = "medium"
+        if part == 6:
             self.direction_first = "vertical"
             self.margin_size = "large"
         self.total_num_points = self.config['pattern'].get('num_points', 50)
@@ -46,9 +46,6 @@ class SaccadePursuitPattern:
         self.height = self.monitor.height
 
         self.countdown_xy = [50, 200]
-        self.root_path = self.config['save']['root_path']
-        os.makedirs(self.root_path, exist_ok=True)
-
         # Initialize pattern parameters from config
         pattern_config = self.config['pattern']
         self.num_rows = pattern_config.get('num_rows', 10)
@@ -76,7 +73,7 @@ class SaccadePursuitPattern:
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         
         # Initialize log file
-        self.log_file = os.path.join(self.root_path, widget.current_label_filename) if widget else "saccade_log.csv"
+        self.log_file = widget.current_label_filename if widget else "saccade_log.csv"
         with open(self.log_file, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Timestamp_ms', 'Point_Index', 'X', 'Y', 'Next_X', 'Next_Y', 'Screen_Width', 'Screen_Height'])

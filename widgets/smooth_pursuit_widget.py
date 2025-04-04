@@ -132,7 +132,7 @@ class DummyWidget(QWidget):
         
 
 class SmoothPursuitWidget(QWidget):
-    def __init__(self, display_widget, config_path, wrapper, horizontal_direction, vertical_direction, direction_first):
+    def __init__(self, display_widget, config_path, wrapper, part):
         super().__init__()
         self.setWindowTitle("Full Screen Countdown")
         
@@ -140,7 +140,7 @@ class SmoothPursuitWidget(QWidget):
         self.init_variables()
         self.display_widget = display_widget
     
-        self.pattern = SmoothPursuitPattern("config/config_smooth.yaml", self.display_widget, horizontal_direction, vertical_direction, direction_first)
+        self.pattern = SmoothPursuitPattern("config/config_smooth.yaml", self.display_widget, part)
 
     def start_animation(self):
         self.hide()

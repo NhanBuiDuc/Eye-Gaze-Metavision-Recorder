@@ -4,7 +4,6 @@ from metavision_core.event_io import EventsIterator, LiveReplayEventsIterator, i
 from metavision_sdk_ui import EventLoop, BaseWindow, MTWindow, UIAction, UIKeyEvent
 from metavision_core.event_io import EventsIterator, LiveReplayEventsIterator, is_live_camera
 from metavision_sdk_core import PeriodicFrameGenerationAlgorithm, ColorPalette
-
 from src.entities.bias_settings import BiasSettings
 
 def convert_coordinates(coord, max_width=1280, max_height=720):
@@ -34,14 +33,13 @@ def convert_coordinates(coord, max_width=1280, max_height=720):
 
 
 class LiveReplayEventsIteratorWrapper:
-    def __init__(self, output_file, event_count, roi_coordinates, bias_file):
-        self.output_folder = output_file
+    def __init__(self, event_count, roi_coordinates, bias_file=None):
         self.event_count = event_count
         self.roi_coordinates = roi_coordinates
         self.bias_file = bias_file
         
         self.device = initiate_device("", do_time_shifting=False)
-        
+
         # Apply bias settings if provided
         if self.bias_file:
             bias_settings = BiasSettings.from_file(self.bias_file)
@@ -50,8 +48,9 @@ class LiveReplayEventsIteratorWrapper:
                 biases.set(name, bias.value)
                 
         self.mv_iterator = EventsIterator.from_device(self.device, start_ts=0, delta_t=33333, mode="delta_t")
-        # self.device.get_i_erc_module().enable(True)
-        # self.device.get_i_erc_module().set_cd_event_count(event_count=self.event_count)
+        # self.mv_iterator = EventsIterator.from_device(self.device, start_ts=0, mode="delta_t")
+        self.device.get_i_erc_module().enable(True)
+        self.device.get_i_erc_module().set_cd_event_count(event_count=self.event_count)
         
         # Get ROI module
         self.I_ROI = self.device.get_i_roi()
@@ -81,14 +80,6 @@ class LiveReplayEventsIteratorWrapper:
         )
 
     def start_recording(self, recording_path):
-        if self.output_folder != "":
-            # Create output folder if it doesn't exist
-            if not os.path.exists(self.output_folder):
-                os.makedirs(self.output_folder)
-                print(f'Created output directory: {self.output_folder}')
-                
-            recording_path = os.path.join(self.output_folder, recording_path)
-        
         self.device.get_i_events_stream().log_raw_data(recording_path)
         print(f'Recording to {recording_path}')
 

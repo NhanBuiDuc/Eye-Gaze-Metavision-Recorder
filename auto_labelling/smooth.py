@@ -9,7 +9,7 @@ import csv
 from datetime import datetime
 
 class SmoothPursuitPattern:
-    def __init__(self, config_path="config\config_saccade.yaml", widget=None, horizontal_direction="left2right", vertical_direction="top2bottom", direction_first = "Horizontal"):
+    def __init__(self, config_path="config\config_saccade.yaml", widget=None, part = 1):
         try:
             with open(config_path, 'r', encoding='utf-8') as file:
                 self.config = yaml.safe_load(file)
@@ -19,16 +19,43 @@ class SmoothPursuitPattern:
 
         self.widget = widget
         self.is_fullscreen = True
-        
-        # Set direction parameters
-        self.horizontal_direction = horizontal_direction
-        self.vertical_direction = vertical_direction
-        self.direction_first = direction_first
+        if part == 1:
+            self.horizontal_direction = "left2right"
+            self.vertical_direction = "top2bottom"
+            self.direction_first = "Horizontal"
+        if part == 2:
+            self.horizontal_direction = "right2left"
+            self.vertical_direction = "top2bottom"
+            self.direction_first = "Horizontal"
+        if part == 3:
+            self.horizontal_direction = "left2right"
+            self.vertical_direction = "bottom2top"
+            self.direction_first = "Horizontal"
+        if part == 4:
+            self.horizontal_direction = "right2left"
+            self.vertical_direction = "bottom2top"
+            self.direction_first = "Horizontal"
+        if part == 5:
+            self.horizontal_direction = "left2right"
+            self.vertical_direction = "top2bottom"
+            self.direction_first = "Vertical"
+        if part == 6:
+            self.horizontal_direction = "right2left"
+            self.vertical_direction = "top2bottom"
+            self.direction_first = "Vertical"
+        if part == 7:
+            self.horizontal_direction = "left2right"
+            self.vertical_direction = "bottom2top"
+            self.direction_first = "Vertical"
+        if part == 8:
+            self.horizontal_direction = "right2left"
+            self.vertical_direction = "bottom2top"
+            self.direction_first = "Vertical"
 
-        if horizontal_direction not in ["left2right", "right2left"]:
+        if self.horizontal_direction not in ["left2right", "right2left"]:
             raise ValueError("horizontal_direction must be 'left2right' or 'right2left'")
             
-        if vertical_direction not in ["top2bottom", "bottom2top"]:
+        if self.vertical_direction not in ["top2bottom", "bottom2top"]:
             raise ValueError("vertical_direction must be 'top2bottom' or 'bottom2top'")
 
         # Get screen dimensions
@@ -49,9 +76,6 @@ class SmoothPursuitPattern:
         elif self.horizontal_direction == "right2left" and self.vertical_direction == "bottom2top":
             # Bottom-right corner
             self.countdown_xy = [self.width - 150, self.height - 80]
-
-        self.root_path = self.config['save']['root_path']
-        os.makedirs(self.root_path, exist_ok=True)
 
         # Initialize pattern parameters from config
         pattern_config = self.config['pattern']
@@ -74,7 +98,7 @@ class SmoothPursuitPattern:
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         
         # Initialize log file
-        self.log_file = os.path.join(self.root_path, widget.current_label_filename) if widget else "saccade_log.csv"
+        self.log_file = widget.current_label_filename if widget else "saccade_log.csv"
         with open(self.log_file, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(['Timestamp_ms', 'Point_Index', 'X', 'Y', 'Next_X', 'Next_Y', 'Screen_Width', 'Screen_Height'])

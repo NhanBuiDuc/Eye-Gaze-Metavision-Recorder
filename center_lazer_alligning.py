@@ -1,7 +1,7 @@
 # import tkinter as tk
 # import screeninfo
 
-# # Get all screens
+# # Get all 
 # screens = screeninfo.get_monitors()
 # current_screen = 0
 

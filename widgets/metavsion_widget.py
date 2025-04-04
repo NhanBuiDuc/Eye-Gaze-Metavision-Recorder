@@ -25,22 +25,28 @@ from PyQt5.QtWidgets import QComboBox
 label_mode = ["smooth", "saccadde"]
 # Get current date in dd_mm_yyyy format
 current_date = datetime.now().strftime("%d_%m_%Y")
-
+current_time = datetime.now().strftime("%H_%M_%S")
 class MetavisionWidget(QWidget):
     def __init__(self, wrapper, parent=None):
         super().__init__(parent)
         self.wrapper = wrapper
         self.current_label_mode = label_mode[0]
-        self.default_filename = f"name_eyeID_mode_{current_date}"
-        self.current_label_filename = f"label_name_eyeID_mode_{current_date}.csv"
-        self.current_record_filename = f"record_name_eyeID_mode_{current_date}.raw"
-        self.current_config_filename = f"config_name_eyeID_mode_{current_date}.yaml"
+        
+        self.default_foldername = "name"
+        self.default_filename = f"name_eyeID_mode"
+        self.current_label_filename = f"label_name_eyeID_mode.csv"
+        self.current_record_filename = f"record_name_eyeID_mode.raw"
+        self.current_config_filename = f"config_name_eyeID_mode.yaml"
+        self.base_data_folder = "public"
+        self.data_folder = "name"
+        os.makedirs(self.base_data_folder, exist_ok=True)
 
-        self.config_yaml_path = "public/config"
-        os.makedirs(self.config_yaml_path, exist_ok=True)
+        # self.config_yaml_path = "public/config"
+        # os.makedirs(self.config_yaml_path, exist_ok=True)
         
         self.recording_waiting_time = 5
         self.current_saccade_part = 1
+        self.current_smooth_part = 1
         self.current_starting_timestamp = 0
         self.roi = [300,200,900,600]
         self.is_recording = False
@@ -50,12 +56,10 @@ class MetavisionWidget(QWidget):
         
         # Flags for tracking confirmation states
         self.filename_confirmed = False
+        self.foldername_confirmed = False
         self.part_confirmed = False
 
-        self.horizontal_direction = "left2right"
-        self.vertical_direction = "top2bottom"
-        self.direction_first = "Horizontal"
-        self.direction_confirmed = False
+        # self.direction_confirmed = False
 
         self.event_list = []
         self.setup_ui()
@@ -70,12 +74,21 @@ class MetavisionWidget(QWidget):
 
     def confirm_file_names(self):
         """Handle file name confirmation and update UI"""
-        
+
+        # Check if the filename is still the default
+        if self.folder_text_box.text() == self.default_foldername:
+            QMessageBox.warning(
+                self, 
+                "Invalid Folder name", 
+                "Please enter a custom folder before confirming."
+            )
+            return
+                
         # Check if the filename is still the default
         if self.file_text_box.text() == self.default_filename:
             QMessageBox.warning(
                 self, 
-                "Invalid Filename", 
+                "Invalid File name", 
                 "Please enter a custom filename before confirming."
             )
             return
@@ -83,16 +96,34 @@ class MetavisionWidget(QWidget):
         x1, y1, x2, y2 = self.wrapper.roi_coordinates
         coord_str = f"{x1}_{y1}_{x2}_{y2}"
         print(coord_str)
-        self.current_label_filename = f"label_{coord_str}_{self.file_text_box.text()}.csv"
-        self.current_record_filename = f"record_{coord_str}_{self.file_text_box.text()}.raw"
-        self.current_config_filename = f"config_{coord_str}_{self.file_text_box.text()}.yaml"
+        # Create the folder paths
+        self.data_folder = self.folder_text_box.text()
+        labels_folder = f"{self.base_data_folder}/{self.data_folder}/labels/{current_date}"
+        record_folder = f"{self.base_data_folder}/{self.data_folder}/record/{current_date}"
+        config_folder = f"{self.base_data_folder}/{self.data_folder}/config/{current_date}"
+        # Create the directories if they don't exist
+        # os.makedirs(labels_folder, exist_ok=True)
+        # os.makedirs(record_folder, exist_ok=True)
+        # os.makedirs(config_folder, exist_ok=True)
 
-        print(f"Log file: {self.current_label_filename}")
+        if self.pattern_group.checkedButton() == self.smooth_radio:
+            part = self.current_smooth_part
+            self.current_label_filename = f"{labels_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.csv"
+            self.current_record_filename = f"{record_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.raw"
+            self.current_config_filename = f"{config_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.yaml"
+        else:
+            part = self.current_saccade_part
+            self.current_label_filename = f"{labels_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.csv"
+            self.current_record_filename = f"{record_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.raw"
+            self.current_config_filename = f"{config_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.yaml"
+
+        print(f"Label file: {self.current_label_filename}")
         print(f"Record file: {self.current_record_filename}")
+        print(f"Config file: {self.current_config_filename}")
         
         # Set confirmation flag
         self.filename_confirmed = True
-        
+        self.foldername_confirmed = True        
         # Visual feedback
         self.confirm_button.setText("✓ Confirmed")
         self.confirm_button.setEnabled(False)
@@ -275,7 +306,7 @@ class MetavisionWidget(QWidget):
             part_value = int(self.saccade_part_input.text())
             if 1 <= part_value <= 6:
                 # Convert from 1-10 to 0-9 for internal use
-                self.current_saccade_part = part_value - 1
+                self.current_saccade_part = part_value
                 QMessageBox.information(
                     self, 
                     "Saccade Part", 
@@ -358,247 +389,6 @@ class MetavisionWidget(QWidget):
         self.displayer.set_drag_enabled(not manual_enabled)
 
 
-    def create_recording_group(self):
-        recording_group = QGroupBox("Recording Controls")
-        recording_group.setStyleSheet(StyleSheetMain.GROUP_BOX)
-        layout = QVBoxLayout()
-        layout.setSpacing(15)
-        layout.setContentsMargins(15, 25, 15, 15)  # Top margin increased for title
-        
-        # Pattern selection label with icon
-        pattern_header = QHBoxLayout()
-        pattern_header.setContentsMargins(0, 0, 0, 5)
-        pattern_icon = QLabel("🎯")
-        pattern_icon.setFont(QFont("", 16))
-        pattern_label = QLabel("Recording Style:")
-        pattern_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #455A64;")
-        pattern_header.addWidget(pattern_icon)
-        pattern_header.addWidget(pattern_label)
-        pattern_header.addStretch()
-        layout.addLayout(pattern_header)
-        
-        # Radio buttons for pattern selection
-        self.pattern_group = QButtonGroup(self)
-        
-        # Smooth Pursuit radio
-        self.smooth_radio = QRadioButton("Smooth Pursuit")
-        self.smooth_radio.setStyleSheet(StyleSheetMain.RADIO_BUTTON)
-        self.smooth_radio.setChecked(True)
-        self.pattern_group.addButton(self.smooth_radio)
-        layout.addWidget(self.smooth_radio)
-        
-        # Saccade radio
-        self.saccade_radio = QRadioButton("Saccade")
-        self.saccade_radio.setStyleSheet(StyleSheetMain.RADIO_BUTTON)
-        self.pattern_group.addButton(self.saccade_radio)
-        layout.addWidget(self.saccade_radio)
-
-        # Connect pattern selection changes
-        self.smooth_radio.toggled.connect(self.on_pattern_changed)
-        self.saccade_radio.toggled.connect(self.on_pattern_changed)
-        
-        # Create container for direction settings (for smooth pursuit)
-        self.direction_settings_container = QWidget()
-        direction_layout = QVBoxLayout(self.direction_settings_container)
-        direction_layout.setContentsMargins(10, 5, 10, 5)
-        direction_layout.setSpacing(8)
-        
-        # Add a subtle background to the container
-        self.direction_settings_container.setStyleSheet("""
-            QWidget {
-                background-color: rgba(240, 240, 240, 0.5);
-                border-radius: 5px;
-            }
-        """)
-        
-        # Direction settings label
-        direction_header = QLabel("Direction Settings:")
-        direction_header.setStyleSheet("color: #455A64; font-weight: bold; background: transparent;")
-        direction_layout.addWidget(direction_header)
-        
-        # Horizontal direction selection
-        h_direction_layout = QHBoxLayout()
-        h_direction_label = QLabel("Horizontal:")
-        h_direction_label.setStyleSheet("color: #455A64; background: transparent;")
-        
-        self.h_direction_combo = QComboBox()
-        self.h_direction_combo.addItems(["left2right", "right2left"])
-        self.h_direction_combo.setStyleSheet("""
-            QComboBox {
-                padding: 4px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: white;
-            }
-        """)
-        
-        h_direction_layout.addWidget(h_direction_label)
-        h_direction_layout.addWidget(self.h_direction_combo)
-        direction_layout.addLayout(h_direction_layout)
-        
-        # Vertical direction selection
-        v_direction_layout = QHBoxLayout()
-        v_direction_label = QLabel("Vertical:")
-        v_direction_label.setStyleSheet("color: #455A64; background: transparent;")
-        
-        self.v_direction_combo = QComboBox()
-        self.v_direction_combo.addItems(["top2bottom", "bottom2top"])
-        self.v_direction_combo.setStyleSheet("""
-            QComboBox {
-                padding: 4px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: white;
-            }
-        """)
-        
-        v_direction_layout.addWidget(v_direction_label)
-        v_direction_layout.addWidget(self.v_direction_combo)
-        direction_layout.addLayout(v_direction_layout)
-
-        # Direction first selection
-        direction_first_layout = QHBoxLayout()
-        direction_first_label = QLabel("Horizontal or Vertical First:")
-        direction_first_label.setStyleSheet("color: #455A64; background: transparent;")
-        
-        self.direction_first_combo = QComboBox()
-        self.direction_first_combo.addItems(["Horizontal", "Vertical"])
-        self.direction_first_combo.setStyleSheet("""
-            QComboBox {
-                padding: 4px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: white;
-            }
-        """)
-        
-        direction_first_layout.addWidget(direction_first_label)
-        direction_first_layout.addWidget(self.direction_first_combo)
-        direction_layout.addLayout(direction_first_layout)
-
-
-        # Confirm button for direction settings
-        self.confirm_direction_button = QPushButton("Confirm Directions")
-        self.confirm_direction_button.setStyleSheet(StyleSheetMain.BUTTON)
-        self.confirm_direction_button.clicked.connect(self.confirm_direction_settings)
-        direction_layout.addWidget(self.confirm_direction_button)
-        
-        layout.addWidget(self.direction_settings_container)
-        
-        # Create a container for saccade-specific settings
-        self.saccade_settings_container = QWidget()
-        saccade_layout = QVBoxLayout(self.saccade_settings_container)
-        saccade_layout.setContentsMargins(10, 5, 10, 5)
-        saccade_layout.setSpacing(8)
-        
-        # Add a subtle background to the container
-        self.saccade_settings_container.setStyleSheet("""
-            QWidget {
-                background-color: rgba(240, 240, 240, 0.5);
-                border-radius: 5px;
-            }
-        """)
-        
-        # Saccade part selection
-        saccade_part_layout = QHBoxLayout()
-        saccade_part_label = QLabel("Saccade Part:")
-        saccade_part_label.setStyleSheet("color: #455A64; background: transparent;")
-        
-        self.saccade_part_input = QLineEdit("1")
-        self.saccade_part_input.setFixedWidth(50)
-        self.saccade_part_input.setValidator(QIntValidator(1, 10))  # Limit to numbers 1-10
-        self.saccade_part_input.setAlignment(Qt.AlignCenter)
-        self.saccade_part_input.setToolTip("Choose a saccade pattern part (1-10)")
-        self.saccade_part_input.setStyleSheet("""
-            QLineEdit {
-                padding: 4px;
-                border: 1px solid #ccc;
-                border-radius: 3px;
-                background-color: white;
-            }
-        """)
-        
-        self.confirm_part_button = QPushButton("Apply")
-        self.confirm_part_button.setStyleSheet(StyleSheetMain.BUTTON)
-        self.confirm_part_button.setFixedWidth(70)
-        self.confirm_part_button.clicked.connect(self.confirm_saccade_part)
-        
-        saccade_part_layout.addWidget(saccade_part_label)
-        saccade_part_layout.addWidget(self.saccade_part_input)
-        saccade_part_layout.addWidget(self.confirm_part_button)
-        saccade_part_layout.addStretch()
-        
-        saccade_layout.addLayout(saccade_part_layout)
-        layout.addWidget(self.saccade_settings_container)
-        
-        # Initially hide saccade settings
-        self.saccade_settings_container.setVisible(False)
-        
-        # Add waiting time section with improved styling
-        waiting_section = QHBoxLayout()
-        waiting_label = QLabel("Countdown Time:")
-        waiting_label.setStyleSheet("color: #455A64;")
-        
-        buttons_layout = QHBoxLayout()
-        buttons_layout.setSpacing(10)
-        self.start_button = QPushButton("▶ Start Recording")
-        self.start_button.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 8px 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #3d8b40;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
-        self.start_button.setFixedSize(160, 40)
-        self.start_button.clicked.connect(self.start_selected_pattern)
-        
-        # Stop button
-        self.stop_button = QPushButton("⬛ Stop")
-        self.stop_button.setStyleSheet("""
-            QPushButton {
-                background-color: #f44336;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 8px 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #d32f2f;
-            }
-            QPushButton:pressed {
-                background-color: #b71c1c;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
-        self.stop_button.setFixedSize(100, 40)
-        self.stop_button.setEnabled(False)
-        self.stop_button.clicked.connect(self.stop_recording)
-        
-        buttons_layout.addWidget(self.start_button)
-        buttons_layout.addWidget(self.stop_button)
-        buttons_layout.addStretch()
-        
-        layout.addLayout(buttons_layout)
-        
-        recording_group.setLayout(layout)
-        return recording_group
     # def create_recording_group(self):
     #     recording_group = QGroupBox("Recording Controls")
     #     recording_group.setStyleSheet(StyleSheetMain.GROUP_BOX)
@@ -637,7 +427,95 @@ class MetavisionWidget(QWidget):
     #     # Connect pattern selection changes
     #     self.smooth_radio.toggled.connect(self.on_pattern_changed)
     #     self.saccade_radio.toggled.connect(self.on_pattern_changed)
+        
+    #     # Create container for direction settings (for smooth pursuit)
+    #     self.direction_settings_container = QWidget()
+    #     direction_layout = QVBoxLayout(self.direction_settings_container)
+    #     direction_layout.setContentsMargins(10, 5, 10, 5)
+    #     direction_layout.setSpacing(8)
+        
+    #     # Add a subtle background to the container
+    #     self.direction_settings_container.setStyleSheet("""
+    #         QWidget {
+    #             background-color: rgba(240, 240, 240, 0.5);
+    #             border-radius: 5px;
+    #         }
+    #     """)
+        
+    #     # Direction settings label
+    #     direction_header = QLabel("Direction Settings:")
+    #     direction_header.setStyleSheet("color: #455A64; font-weight: bold; background: transparent;")
+    #     direction_layout.addWidget(direction_header)
+        
+    #     # Horizontal direction selection
+    #     h_direction_layout = QHBoxLayout()
+    #     h_direction_label = QLabel("Horizontal:")
+    #     h_direction_label.setStyleSheet("color: #455A64; background: transparent;")
+        
+    #     self.h_direction_combo = QComboBox()
+    #     self.h_direction_combo.addItems(["left2right", "right2left"])
+    #     self.h_direction_combo.setStyleSheet("""
+    #         QComboBox {
+    #             padding: 4px;
+    #             border: 1px solid #ccc;
+    #             border-radius: 3px;
+    #             background-color: white;
+    #         }
+    #     """)
+        
+    #     h_direction_layout.addWidget(h_direction_label)
+    #     h_direction_layout.addWidget(self.h_direction_combo)
+    #     direction_layout.addLayout(h_direction_layout)
+        
+    #     # Vertical direction selection
+    #     v_direction_layout = QHBoxLayout()
+    #     v_direction_label = QLabel("Vertical:")
+    #     v_direction_label.setStyleSheet("color: #455A64; background: transparent;")
+        
+    #     self.v_direction_combo = QComboBox()
+    #     self.v_direction_combo.addItems(["top2bottom", "bottom2top"])
+    #     self.v_direction_combo.setStyleSheet("""
+    #         QComboBox {
+    #             padding: 4px;
+    #             border: 1px solid #ccc;
+    #             border-radius: 3px;
+    #             background-color: white;
+    #         }
+    #     """)
+        
+    #     v_direction_layout.addWidget(v_direction_label)
+    #     v_direction_layout.addWidget(self.v_direction_combo)
+    #     direction_layout.addLayout(v_direction_layout)
 
+    #     # Direction first selection
+    #     direction_first_layout = QHBoxLayout()
+    #     direction_first_label = QLabel("Horizontal or Vertical First:")
+    #     direction_first_label.setStyleSheet("color: #455A64; background: transparent;")
+        
+    #     self.direction_first_combo = QComboBox()
+    #     self.direction_first_combo.addItems(["Horizontal", "Vertical"])
+    #     self.direction_first_combo.setStyleSheet("""
+    #         QComboBox {
+    #             padding: 4px;
+    #             border: 1px solid #ccc;
+    #             border-radius: 3px;
+    #             background-color: white;
+    #         }
+    #     """)
+        
+    #     direction_first_layout.addWidget(direction_first_label)
+    #     direction_first_layout.addWidget(self.direction_first_combo)
+    #     direction_layout.addLayout(direction_first_layout)
+
+
+    #     # Confirm button for direction settings
+    #     self.confirm_direction_button = QPushButton("Confirm Directions")
+    #     self.confirm_direction_button.setStyleSheet(StyleSheetMain.BUTTON)
+    #     self.confirm_direction_button.clicked.connect(self.confirm_direction_settings)
+    #     direction_layout.addWidget(self.confirm_direction_button)
+        
+    #     layout.addWidget(self.direction_settings_container)
+        
     #     # Create a container for saccade-specific settings
     #     self.saccade_settings_container = QWidget()
     #     saccade_layout = QVBoxLayout(self.saccade_settings_container)
@@ -692,45 +570,8 @@ class MetavisionWidget(QWidget):
     #     waiting_label = QLabel("Countdown Time:")
     #     waiting_label.setStyleSheet("color: #455A64;")
         
-    #     self.waiting_time_input = QLineEdit()
-    #     self.waiting_time_input.setFixedWidth(60)
-    #     self.waiting_time_input.setAlignment(Qt.AlignCenter)
-    #     self.waiting_time_input.setStyleSheet("""
-    #         QLineEdit {
-    #             padding: 4px;
-    #             border: 1px solid #ccc;
-    #             border-radius: 3px;
-    #             background-color: white;
-    #         }
-    #     """)
-    #     self.waiting_time_input.setText(str(self.recording_waiting_time))
-        
-    #     waiting_seconds_label = QLabel("seconds")
-    #     waiting_seconds_label.setStyleSheet("color: #455A64;")
-        
-    #     # Add validator for integers only
-    #     validator = QIntValidator(1, 60)  # Limit to reasonable countdown values
-    #     self.waiting_time_input.setValidator(validator)
-    #     self.waiting_time_input.setToolTip("Set countdown time before recording (1-60 seconds)")
-        
-    #     # Add focus out event to validate when leaving the text box
-    #     self.waiting_time_input.focusOutEvent = self.validate_waiting_time
-    #     # Add text changed event
-    #     self.waiting_time_input.textChanged.connect(self.on_waiting_time_changed)
-        
-    #     waiting_section.addWidget(waiting_label)
-    #     waiting_section.addWidget(self.waiting_time_input)
-    #     waiting_section.addWidget(waiting_seconds_label)
-    #     waiting_section.addStretch()
-        
-    #     layout.addLayout(waiting_section)
-    #     layout.addSpacing(15)  # Add space before buttons
-        
-    #     # Control buttons container with improved styling
     #     buttons_layout = QHBoxLayout()
     #     buttons_layout.setSpacing(10)
-        
-    #     # Start button
     #     self.start_button = QPushButton("▶ Start Recording")
     #     self.start_button.setStyleSheet("""
     #         QPushButton {
@@ -789,7 +630,7 @@ class MetavisionWidget(QWidget):
         
     #     recording_group.setLayout(layout)
     #     return recording_group
-    
+
     def confirm_direction_settings(self):
         """Handle direction settings confirmation"""
         self.horizontal_direction = self.h_direction_combo.currentText()
@@ -870,6 +711,25 @@ class MetavisionWidget(QWidget):
         layout.setSpacing(15)
         layout.setContentsMargins(15, 25, 15, 15)  # Top margin increased for title
         
+        # File folder name section
+        folder_header = QHBoxLayout()
+        folder_icon = QLabel("📄")
+        folder_icon.setFont(QFont("", 16))
+        folder_label = QLabel("Folder Name:")
+        folder_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #455A64;")
+        folder_header.addWidget(folder_icon)
+        folder_header.addWidget(folder_label)
+        folder_header.addStretch()
+        layout.addLayout(folder_header)
+        
+        # File name input
+        self.folder_text_box = QLineEdit()
+        self.folder_text_box.setText(self.default_foldername) # Base filename without extension
+        self.folder_text_box.setStyleSheet(StyleSheetMain.TEXTBOX)
+        # Connect text change to reset confirmation flag
+        self.folder_text_box.textChanged.connect(self.on_foldername_changed)
+        layout.addWidget(self.folder_text_box)
+        
         # File name input section
         file_header = QHBoxLayout()
         file_icon = QLabel("📄")
@@ -908,111 +768,60 @@ class MetavisionWidget(QWidget):
         """Reset filename confirmation when text is changed"""
         self.filename_confirmed = False
         self.update_start_button_state()
-    
+
+    def on_foldername_changed(self, text):
+        """Reset filename confirmation when text is changed"""
+        self.foldername_confirmed = False
+        self.update_start_button_state()
+
     def open_csv_analysis(self):
         """Open the CSV Analysis window"""
         self.csv_analysis_window = CSVAnalysisWindow()
         self.csv_analysis_window.show()
 
-    def start_recording(self):
-        if self.pattern_group.checkedButton() == self.saccade_radio:
-            part = self.current_saccade_part
-            x1, y1, x2, y2 =  self.wrapper.roi_coordinates
-            coord_str = f"{x1}_{y1}_{x2}_{y2}"
-            print(coord_str)
-            self.current_label_filename = f"label_{coord_str}_{self.file_text_box.text()}_part{part+1}.csv"
-            self.current_record_filename = f"record_{coord_str}_{self.file_text_box.text()}_part{part+1}.raw"
-            self.current_config_filename = f"config_{coord_str}_{self.file_text_box.text()}_part{part+1}.yaml"
+    # def start_recording(self):
+    #     if self.pattern_group.checkedButton() == self.saccade_radio:
+    #         part = self.current_saccade_part
+    #         x1, y1, x2, y2 =  self.wrapper.roi_coordinates
+    #         coord_str = f"{x1}_{y1}_{x2}_{y2}"
+    #         print(coord_str)
+    #         self.current_label_filename = f"label_{coord_str}_{self.file_text_box.text()}_part{part+1}.csv"
+    #         self.current_record_filename = f"record_{coord_str}_{self.file_text_box.text()}_part{part+1}.raw"
+    #         self.current_config_filename = f"config_{coord_str}_{self.file_text_box.text()}_part{part+1}.yaml"
 
-        print(f"Log file: {self.current_label_filename}")
-        print(f"Record file: {self.current_record_filename}")
-        print("Start recoding at timestamp: ", self.events[-1][3])
-        self.current_starting_timestamp = self.events[-1][3]
-        self.write_yaml_file()
-        self.wrapper.start_recording(self.current_record_filename)
-        self.is_recording = True
-        print("Is recording: ", self.is_recording)
-        self.stop_button.setEnabled(True)
-        self.start_button.setEnabled(False)
-        self.smooth_radio.setEnabled(False)
-        self.saccade_radio.setEnabled(False)
+    #     print(f"Log file: {self.current_label_filename}")
+    #     print(f"Record file: {self.current_record_filename}")
+    #     print("Start recoding at timestamp: ", self.events[-1][3])
+    #     self.current_starting_timestamp = self.events[-1][3]
+    #     self.write_yaml_file()
+    #     self.wrapper.start_recording(self.current_record_filename)
+    #     self.is_recording = True
+    #     print("Is recording: ", self.is_recording)
+    #     self.stop_button.setEnabled(True)
+    #     self.start_button.setEnabled(False)
+    #     self.smooth_radio.setEnabled(False)
+    #     self.saccade_radio.setEnabled(False)
 
-    def write_yaml_file(self):
-        if self.current_label_mode == label_mode[0]:
-            config_data = {
-                'label_mode': self.current_label_mode,
-                'files': {
-                    'default_filename': self.default_filename,
-                    'label_filename': self.current_label_filename,
-                    'record_filename': self.current_record_filename,
-                    'config_filename': self.current_config_filename,
-                    'config_yaml_path': self.config_yaml_path
-                },
-                'recording': {
-                    'waiting_time': self.recording_waiting_time,
-                    'is_recording': self.is_recording,
-                    'starting_timestamp': int(self.current_starting_timestamp),
-                    'horizontal_direction': self.horizontal_direction,
-                    'vertical_direction': self.vertical_direction,
-                    "horizontal_first": self.direction_first
-                },
-                'display': {
-                    'roi': self.roi,
-                    'roi_control_mode': self.roi_control_mode
-                },
-                'states': {
-                    'filename_confirmed': self.filename_confirmed
-                }
-            }
-        else:
-            config_data = {
-                'label_mode': self.current_label_mode,
-                'files': {
-                    'default_filename': self.default_filename,
-                    'label_filename': self.current_label_filename,
-                    'record_filename': self.current_record_filename,
-                    'config_filename': self.current_config_filename,
-                    'config_yaml_path': self.config_yaml_path
-                },
-                'recording': {
-                    'waiting_time': self.recording_waiting_time,
-                    'is_recording': self.is_recording,
-                    'saccade_part': self.current_saccade_part,
-                    'starting_timestamp': int(self.current_starting_timestamp)
-                },
-                'display': {
-                    'roi': self.roi,
-                    'roi_control_mode': self.roi_control_mode
-                },
-                'states': {
-                    'filename_confirmed': self.filename_confirmed
-                }
-            }
-
-        with open(os.path.join(self.config_yaml_path, self.current_config_filename), 'w') as file:
+    # def stop_recording(self):
+    #     print("stop recording file ", self.current_record_filename)
+    #     self.wrapper.stop_recording()
+    #     self.is_recording = False
+    #     print("Is recording: ", self.is_recording)
+    #     self.stop_button.setEnabled(False)
+    #     self.start_button.setEnabled(True)
+    #     self.smooth_radio.setEnabled(True)
+    #     self.saccade_radio.setEnabled(True)
             
-            yaml.dump(config_data, file, default_flow_style=False, sort_keys=False)
-
-    def stop_recording(self):
-        print("stop recording file ", self.current_record_filename)
-        self.wrapper.stop_recording()
-        self.is_recording = False
-        print("Is recording: ", self.is_recording)
-        self.stop_button.setEnabled(False)
-        self.start_button.setEnabled(True)
-        self.smooth_radio.setEnabled(True)
-        self.saccade_radio.setEnabled(True)
+    #     cv2.destroyAllWindows()
+    #     # Close the pattern window if it exists
+    #     if self.current_pattern_obj is not None:
+    #         self.current_pattern_obj.end_animation()
+    #         self.current_pattern_obj.hide()
+    #         self.current_pattern_obj.close()
+    #         self.current_pattern_obj = None
             
-        cv2.destroyAllWindows()
-        # Close the pattern window if it exists
-        if self.current_pattern_obj is not None:
-            self.current_pattern_obj.end_animation()
-            self.current_pattern_obj.hide()
-            self.current_pattern_obj.close()
-            self.current_pattern_obj = None
-            
-        self.part_confirmed = False
-        self.update_start_button_state()
+    #     self.part_confirmed = False
+    #     self.update_start_button_state()
 
     # def start_smooth_pursuit(self):
     #     """Start the smooth pursuit pattern"""
@@ -1134,29 +943,29 @@ class MetavisionWidget(QWidget):
         except ValueError:
             pass  # Invalid input, will be handled by validator
 
-    def update_start_button_state(self):
-        """Update the state of the start button based on current conditions"""
-        # Check if filename is confirmed
-        if not self.filename_confirmed:
-            self.start_button.setEnabled(False)
-            self.start_button.setToolTip("Please confirm the file name first")
-            return
+    # def update_start_button_state(self):
+    #     """Update the state of the start button based on current conditions"""
+    #     # Check if filename is confirmed
+    #     if not self.filename_confirmed:
+    #         self.start_button.setEnabled(False)
+    #         self.start_button.setToolTip("Please confirm the file name first")
+    #         return
         
-        # If in smooth mode, check direction confirmation
-        if self.smooth_radio.isChecked() and not self.direction_confirmed:
-            self.start_button.setEnabled(False)
-            self.start_button.setToolTip("Please confirm direction settings first")
-            return
+    #     # If in smooth mode, check direction confirmation
+    #     if self.smooth_radio.isChecked() and not self.direction_confirmed:
+    #         self.start_button.setEnabled(False)
+    #         self.start_button.setToolTip("Please confirm direction settings first")
+    #         return
         
-        # If in saccade mode, check part confirmation
-        if self.saccade_radio.isChecked() and not self.part_confirmed:
-            self.start_button.setEnabled(False)
-            self.start_button.setToolTip("Please confirm the saccade part first")
-            return
+    #     # If in saccade mode, check part confirmation
+    #     if self.saccade_radio.isChecked() and not self.part_confirmed:
+    #         self.start_button.setEnabled(False)
+    #         self.start_button.setToolTip("Please confirm the saccade part first")
+    #         return
         
-        # If all conditions are met
-        self.start_button.setEnabled(True)
-        self.start_button.setToolTip("Start recording")
+    #     # If all conditions are met
+    #     self.start_button.setEnabled(True)
+    #     self.start_button.setToolTip("Start recording")
 
     # def update_start_button_state(self):
     #     """Update the state of the start button based on current conditions"""
@@ -1175,3 +984,399 @@ class MetavisionWidget(QWidget):
     #     # If all conditions are met
     #     self.start_button.setEnabled(True)
     #     self.start_button.setToolTip("Start recording")
+
+#################################################
+
+    def create_recording_group(self):
+        recording_group = QGroupBox("Recording Controls")
+        recording_group.setStyleSheet(StyleSheetMain.GROUP_BOX)
+        layout = QVBoxLayout()
+        layout.setSpacing(15)
+        layout.setContentsMargins(15, 25, 15, 15)  # Top margin increased for title
+        
+        # Pattern selection label with icon
+        pattern_header = QHBoxLayout()
+        pattern_header.setContentsMargins(0, 0, 0, 5)
+        pattern_icon = QLabel("🎯")
+        pattern_icon.setFont(QFont("", 16))
+        pattern_label = QLabel("Recording Style:")
+        pattern_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #455A64;")
+        pattern_header.addWidget(pattern_icon)
+        pattern_header.addWidget(pattern_label)
+        pattern_header.addStretch()
+        layout.addLayout(pattern_header)
+        
+        # Radio buttons for pattern selection
+        self.pattern_group = QButtonGroup(self)
+        
+        # Smooth Pursuit radio
+        self.smooth_radio = QRadioButton("Smooth Pursuit")
+        self.smooth_radio.setStyleSheet(StyleSheetMain.RADIO_BUTTON)
+        self.smooth_radio.setChecked(True)
+        self.pattern_group.addButton(self.smooth_radio)
+        layout.addWidget(self.smooth_radio)
+        
+        # Saccade radio
+        self.saccade_radio = QRadioButton("Saccade")
+        self.saccade_radio.setStyleSheet(StyleSheetMain.RADIO_BUTTON)
+        self.pattern_group.addButton(self.saccade_radio)
+        layout.addWidget(self.saccade_radio)
+
+        # Connect pattern selection changes
+        self.smooth_radio.toggled.connect(self.on_pattern_changed)
+        self.saccade_radio.toggled.connect(self.on_pattern_changed)
+        
+        # Create a container for smooth pursuit settings
+        self.smooth_settings_container = QWidget()
+        smooth_layout = QVBoxLayout(self.smooth_settings_container)
+        smooth_layout.setContentsMargins(10, 5, 10, 5)
+        smooth_layout.setSpacing(8)
+        
+        # Add a subtle background to the container
+        self.smooth_settings_container.setStyleSheet("""
+            QWidget {
+                background-color: rgba(240, 240, 240, 0.5);
+                border-radius: 5px;
+            }
+        """)
+        
+        # Smooth part selection
+        smooth_part_layout = QHBoxLayout()
+        smooth_part_label = QLabel("Smooth Part:")
+        smooth_part_label.setStyleSheet("color: #455A64; background: transparent;")
+        
+        self.smooth_part_input = QLineEdit("1")
+        self.smooth_part_input.setFixedWidth(50)
+        self.smooth_part_input.setValidator(QIntValidator(1, 10))  # Limit to numbers 1-10
+        self.smooth_part_input.setAlignment(Qt.AlignCenter)
+        self.smooth_part_input.setToolTip("Choose a smooth pattern part (1-10)")
+        self.smooth_part_input.setStyleSheet("""
+            QLineEdit {
+                padding: 4px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background-color: white;
+            }
+        """)
+        
+        self.confirm_smooth_part_button = QPushButton("Apply")
+        self.confirm_smooth_part_button.setStyleSheet(StyleSheetMain.BUTTON)
+        self.confirm_smooth_part_button.setFixedWidth(70)
+        self.confirm_smooth_part_button.clicked.connect(self.confirm_smooth_part)
+        
+        smooth_part_layout.addWidget(smooth_part_label)
+        smooth_part_layout.addWidget(self.smooth_part_input)
+        smooth_part_layout.addWidget(self.confirm_smooth_part_button)
+        smooth_part_layout.addStretch()
+        
+        smooth_layout.addLayout(smooth_part_layout)
+        layout.addWidget(self.smooth_settings_container)
+        
+        # Create a container for saccade-specific settings
+        self.saccade_settings_container = QWidget()
+        saccade_layout = QVBoxLayout(self.saccade_settings_container)
+        saccade_layout.setContentsMargins(10, 5, 10, 5)
+        saccade_layout.setSpacing(8)
+        
+        # Add a subtle background to the container
+        self.saccade_settings_container.setStyleSheet("""
+            QWidget {
+                background-color: rgba(240, 240, 240, 0.5);
+                border-radius: 5px;
+            }
+        """)
+        
+        # Saccade part selection
+        saccade_part_layout = QHBoxLayout()
+        saccade_part_label = QLabel("Saccade Part:")
+        saccade_part_label.setStyleSheet("color: #455A64; background: transparent;")
+        
+        self.saccade_part_input = QLineEdit("1")
+        self.saccade_part_input.setFixedWidth(50)
+        self.saccade_part_input.setValidator(QIntValidator(1, 10))  # Limit to numbers 1-10
+        self.saccade_part_input.setAlignment(Qt.AlignCenter)
+        self.saccade_part_input.setToolTip("Choose a saccade pattern part (1-10)")
+        self.saccade_part_input.setStyleSheet("""
+            QLineEdit {
+                padding: 4px;
+                border: 1px solid #ccc;
+                border-radius: 3px;
+                background-color: white;
+            }
+        """)
+        
+        self.confirm_part_button = QPushButton("Apply")
+        self.confirm_part_button.setStyleSheet(StyleSheetMain.BUTTON)
+        self.confirm_part_button.setFixedWidth(70)
+        self.confirm_part_button.clicked.connect(self.confirm_saccade_part)
+        
+        saccade_part_layout.addWidget(saccade_part_label)
+        saccade_part_layout.addWidget(self.saccade_part_input)
+        saccade_part_layout.addWidget(self.confirm_part_button)
+        saccade_part_layout.addStretch()
+        
+        saccade_layout.addLayout(saccade_part_layout)
+        layout.addWidget(self.saccade_settings_container)
+        
+        # Initially hide saccade settings and show smooth settings
+        self.saccade_settings_container.setVisible(False)
+        self.smooth_settings_container.setVisible(True)
+        
+        # Add waiting time section with improved styling
+        waiting_section = QHBoxLayout()
+        waiting_label = QLabel("Countdown Time:")
+        waiting_label.setStyleSheet("color: #455A64;")
+        
+        buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(10)
+        self.start_button = QPushButton("▶ Start Recording")
+        self.start_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 8px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
+        self.start_button.setFixedSize(160, 40)
+        self.start_button.clicked.connect(self.start_selected_pattern)
+        
+        # Stop button
+        self.stop_button = QPushButton("⬛ Stop")
+        self.stop_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 8px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #d32f2f;
+            }
+            QPushButton:pressed {
+                background-color: #b71c1c;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """)
+        self.stop_button.setFixedSize(100, 40)
+        self.stop_button.setEnabled(False)
+        self.stop_button.clicked.connect(self.stop_recording)
+        
+        buttons_layout.addWidget(self.start_button)
+        buttons_layout.addWidget(self.stop_button)
+        buttons_layout.addStretch()
+        
+        layout.addLayout(buttons_layout)
+        
+        recording_group.setLayout(layout)
+        return recording_group
+
+    def confirm_smooth_part(self):
+        """Handle the smooth part confirmation"""
+        try:
+            part_value = int(self.smooth_part_input.text())
+            if 1 <= part_value <= 8:  # Adjust range as needed
+                self.current_smooth_part = part_value
+                QMessageBox.information(
+                    self, 
+                    "Smooth Part", 
+                    f"Smooth pattern part {part_value} selected successfully."
+                )
+                self.part_confirmed = True
+                self.update_start_button_state()
+            else:
+                QMessageBox.warning(
+                    self, 
+                    "Invalid Input", 
+                    "Please enter a number between 1 and 6."
+                )
+        except ValueError:
+            QMessageBox.warning(
+                self, 
+                "Invalid Input", 
+                "Please enter a valid number."
+            )
+
+    def on_pattern_changed(self):
+        """Handle pattern selection changed"""
+        is_saccade_mode = self.saccade_radio.isChecked()
+        is_smooth_mode = self.smooth_radio.isChecked()
+        
+        if is_smooth_mode:
+            self.current_label_mode = label_mode[0]
+        else:
+            self.current_label_mode = label_mode[1]
+        
+        # Toggle visibility of settings containers
+        self.saccade_settings_container.setVisible(is_saccade_mode)
+        self.smooth_settings_container.setVisible(is_smooth_mode)
+        
+        # Reset part confirmation when switching modes
+        self.part_confirmed = False
+        self.update_start_button_state()
+
+    def start_smooth_pursuit(self):
+        """Start the smooth pursuit pattern"""
+        self.start_recording()
+        self.current_pattern_obj = SmoothPursuitWidget(
+            self, 
+            "config/config_smooth.yaml", 
+            self.wrapper,
+            part=self.current_smooth_part
+        )
+        if self.current_pattern_obj is not None:
+            self.current_pattern_obj.showFullScreen()
+            self.current_pattern_obj.start_animation()
+
+    def start_recording(self):
+        # Create the folder paths
+        current_date = datetime.now().strftime("%d_%m_%Y_%H")
+        current_time = datetime.now().strftime("%H_%M_%S")
+        self.data_folder = self.folder_text_box.text()
+        labels_folder = f"{self.base_data_folder}/{self.data_folder}/labels/{current_date}"
+        record_folder = f"{self.base_data_folder}/{self.data_folder}/record/{current_date}"
+        config_folder = f"{self.base_data_folder}/{self.data_folder}/config/{current_date}"
+        # Create the directories if they don't exist
+        os.makedirs(labels_folder, exist_ok=True)
+        os.makedirs(record_folder, exist_ok=True)
+        os.makedirs(config_folder, exist_ok=True)
+
+        if self.pattern_group.checkedButton() == self.smooth_radio:
+            part = self.current_smooth_part
+            x1, y1, x2, y2 = self.wrapper.roi_coordinates
+            coord_str = f"{x1}_{y1}_{x2}_{y2}"
+            print(coord_str)
+            self.current_label_filename = f"{labels_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.csv"
+            self.current_record_filename = f"{record_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.raw"
+            self.current_config_filename = f"{config_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.yaml"
+
+        elif self.pattern_group.checkedButton() == self.saccade_radio:
+            part = self.current_saccade_part
+            x1, y1, x2, y2 = self.wrapper.roi_coordinates
+            coord_str = f"{x1}_{y1}_{x2}_{y2}"
+            print(coord_str)
+            self.current_label_filename = f"{labels_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.csv"
+            self.current_record_filename = f"{record_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.raw"
+            self.current_config_filename = f"{config_folder}/{self.file_text_box.text()}_part{part}_{current_time}_{coord_str}.yaml"
+
+        print(f"Label file: {self.current_label_filename}")
+        print(f"Record file: {self.current_record_filename}")
+        print(f"Config file: {self.current_config_filename}")
+        
+        print("Start recoding at timestamp: ", self.events[-1][3])
+        self.current_starting_timestamp = self.events[-1][3]
+        self.write_yaml_file()
+        self.wrapper.start_recording(self.current_record_filename)
+        self.is_recording = True
+        print("Is recording: ", self.is_recording)
+        self.stop_button.setEnabled(True)
+        self.start_button.setEnabled(False)
+        self.smooth_radio.setEnabled(False)
+        self.saccade_radio.setEnabled(False)
+
+    def write_yaml_file(self):
+        if self.current_label_mode == label_mode[0]:
+            config_data = {
+                'label_mode': self.current_label_mode,
+                'files': {
+                    'default_filename': self.default_filename,
+                    'label_filename': self.current_label_filename,
+                    'record_filename': self.current_record_filename,
+                    'config_filename': self.current_config_filename,
+                },
+                'recording': {
+                    'waiting_time': self.recording_waiting_time,
+                    'is_recording': self.is_recording,
+                    'starting_timestamp': int(self.current_starting_timestamp),
+                    'smooth_part': self.current_smooth_part
+                },
+                'display': {
+                    'roi': self.roi,
+                    'roi_control_mode': self.roi_control_mode
+                },
+                'states': {
+                    'filename_confirmed': self.filename_confirmed
+                }
+            }
+        else:
+            config_data = {
+                'label_mode': self.current_label_mode,
+                'files': {
+                    'default_filename': self.default_filename,
+                    'label_filename': self.current_label_filename,
+                    'record_filename': self.current_record_filename,
+                    'config_filename': self.current_config_filename,
+                },
+                'recording': {
+                    'waiting_time': self.recording_waiting_time,
+                    'is_recording': self.is_recording,
+                    'saccade_part': self.current_saccade_part,
+                    'starting_timestamp': int(self.current_starting_timestamp)
+                },
+                'display': {
+                    'roi': self.roi,
+                    'roi_control_mode': self.roi_control_mode
+                },
+                'states': {
+                    'filename_confirmed': self.filename_confirmed
+                }
+            }
+
+        with open(self.current_config_filename, 'w') as file:
+            yaml.dump(config_data, file, default_flow_style=False, sort_keys=False)
+
+    def update_start_button_state(self):
+        """Update the state of the start button based on current conditions"""
+
+        if not self.filename_confirmed or not self.foldername_confirmed:
+            self.start_button.setEnabled(False)
+            self.start_button.setToolTip("Please confirm the file name first")
+            return
+        
+        # Check part confirmation regardless of mode
+        if not self.part_confirmed:
+            self.start_button.setEnabled(False)
+            self.start_button.setToolTip("Please confirm the pattern part first")
+            return
+        
+        # If all conditions are met
+        self.start_button.setEnabled(True)
+        self.start_button.setToolTip("Start recording")
+
+    def stop_recording(self):
+        print("stop recording file ", self.current_record_filename)
+        self.wrapper.stop_recording()
+        self.is_recording = False
+        print("Is recording: ", self.is_recording)
+        self.stop_button.setEnabled(False)
+        self.start_button.setEnabled(True)
+        self.smooth_radio.setEnabled(True)
+        self.saccade_radio.setEnabled(True)
+            
+        cv2.destroyAllWindows()
+        # Close the pattern window if it exists
+        if self.current_pattern_obj is not None:
+            self.current_pattern_obj.end_animation()
+            self.current_pattern_obj.hide()
+            self.current_pattern_obj.close()
+            self.current_pattern_obj = None
+            
+        self.part_confirmed = False
+        self.update_start_button_state()
