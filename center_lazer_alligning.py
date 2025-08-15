@@ -103,7 +103,7 @@ screens = screeninfo.get_monitors()
 current_screen = 0
 
 # Convert cm to pixels (approximately)
-CM_TO_PIXELS = 30.5
+CM_TO_PIXELS = 15.5
 VERTICAL_DISTANCE_CM = 2  # Distance in cm upward
 HORIZONTAL_DISTANCE_CM = 3  # Distance in cm left/right
 VERTICAL_DISTANCE_PIXELS = int(VERTICAL_DISTANCE_CM * CM_TO_PIXELS)

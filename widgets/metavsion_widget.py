@@ -1247,7 +1247,7 @@ class MetavisionWidget(QWidget):
 
     def start_recording(self):
         # Create the folder paths
-        current_date = datetime.now().strftime("%d_%m_%Y_%H")
+        current_date = datetime.now().strftime("%d_%m_%Y")
         current_time = datetime.now().strftime("%H_%M_%S")
         self.data_folder = self.folder_text_box.text()
         labels_folder = f"{self.base_data_folder}/{self.data_folder}/labels/{current_date}"

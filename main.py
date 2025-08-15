@@ -13,7 +13,7 @@ class MainApp(QMainWindow):
         self.wrapper = LiveReplayEventsIteratorWrapper(
             event_count=100000,
             roi_coordinates=[300,200,900,600],
-            bias_file="eye_tracking_b1.bias"
+            bias_file="eye_tracking_noLED.bias"
         )
         
         # Create and set up the metavision widget

@@ -13,7 +13,7 @@ save:
 # Timing Configuration
 timing:
   countdown_seconds: 20        # Initial countdown time
-  point_delay: 0.033         # Delay between points
+  point_delay: 0.1         # Delay between points
   thank_you_duration: 10     # Thank you screen display duration
 
 # Color Configuration (BGR format)
